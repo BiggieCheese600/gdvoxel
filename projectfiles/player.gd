@@ -5,9 +5,13 @@ const SPEED = 10.0
 const SENSITIVITY = 0.003
 var debug = 1
 var captured = 1
+var selected_index := 0
+var selected_block := 1  # default to grass
+const BLOCK_TYPES = [1, 2, 3]  # grass, dirt, stone
 
 @onready var camera = $Camera3D
 @onready var outline = $"../OutlineCube"
+@onready var blocklabel = $CanvasLayer/BlockSelected
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -32,11 +36,25 @@ func _unhandled_input(event):
 	#breaking blocks
 	if event.is_action_pressed("break_block"):
 		var hit = get_block_hit()
-		print("HIT:", hit)
+		#print("HIT:", hit)
 		if hit:
 			hit.collider.destroy_block_at(hit.position, hit.normal)
+	if event.is_action_pressed("place_block"):
+		var hit = get_block_target()
+		if hit:
+			place_block(hit)
+
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			selected_index = (selected_index + 1) % BLOCK_TYPES.size()
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			selected_index = (selected_index - 1 + BLOCK_TYPES.size()) % BLOCK_TYPES.size()
+
+		selected_block = BLOCK_TYPES[selected_index]
+
 
 func _physics_process(_delta):
+	blocklabel.text = "Block Selected: " + str(selected_block)
 	update_outline()
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var direction = (camera.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -63,18 +81,51 @@ func get_block_hit():
 	return space.intersect_ray(query)
 
 func update_outline():
-	var hit = get_block_hit()
-
-	if hit:
-		# Move slightly inside the block you hit
-		var pos = hit.position - hit.normal * 0.01
-
-		# Snap to block grid
-		pos = pos.snapped(Vector3.ONE)
-
-		# Center the outline on the block
-		outline.global_position = pos + Vector3(0.5, 0.5, 0.5)
-
-		outline.visible = true
-	else:
+	var hit = get_block_target()
+	if not hit:
 		outline.visible = false
+		return
+
+	var coords = get_block_coords(hit)
+
+	# Convert block coords → world coords
+	var world_pos = hit.collider.global_position + Vector3(coords.x, coords.y, coords.z)
+
+	outline.global_position = world_pos + Vector3(0.5, 0.5, 0.5)
+	outline.visible = true
+
+func get_block_target():
+	var from = camera.global_position
+	var to = from + camera.global_transform.basis.z * -5.0
+
+	var space = get_world_3d().direct_space_state
+	var query = PhysicsRayQueryParameters3D.create(from, to)
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+
+	return space.intersect_ray(query)
+
+func get_block_coords(hit):
+	var pos = hit.position - hit.normal * 0.5
+	pos -= hit.collider.global_position
+	return Vector3i(
+		int(floor(pos.x)),
+		int(floor(pos.y)),
+		int(floor(pos.z))
+	)
+
+func place_block(hit):
+	var chunk = hit.collider
+	if not chunk:
+		return
+
+	# Block to place INTO = hit.position + normal * 0.5
+	var pos = hit.position + hit.normal * 0.5
+	pos -= chunk.global_position
+
+	var x = int(floor(pos.x))
+	var y = int(floor(pos.y))
+	var z = int(floor(pos.z))
+
+	var block_type = BLOCK_TYPES[selected_index]
+	chunk.place_block_at(x, y, z, block_type)

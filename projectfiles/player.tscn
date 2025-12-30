@@ -16,11 +16,16 @@ disabled = true
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
-[node name="Label" type="Label" parent="CanvasLayer"]
-anchors_preset = -1
+[node name="Crosshair" type="Label" parent="CanvasLayer"]
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 theme_override_font_sizes/font_size = 50
 text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="BlockSelected" type="Label" parent="CanvasLayer"]
+offset_right = 40.0
+offset_bottom = 23.0
+text = "Block Selected:"

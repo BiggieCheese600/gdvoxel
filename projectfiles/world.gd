@@ -5,10 +5,17 @@ extends Node3D
 var noise := FastNoiseLite.new()
 var loaded_chunks := {}
 const Chunk = preload("res://chunk.gd")
+const CHUNK_SIZE = Vector3i(16, 64, 16)
 
 func _ready():
+	noise.seed = randi()
+	noise.frequency = 0.02
+	noise.fractal_octaves = 4
+	noise.fractal_lacunarity = 2.0
+	noise.fractal_gain = 0.5
 	noise.noise_type = FastNoiseLite.TYPE_PERLIN
-	noise.frequency = 0.01
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+
 
 func _process(_delta):
 	var player_pos = $Player.global_position
@@ -23,11 +30,9 @@ func _process(_delta):
 
 func spawn_chunk(cx, cz):
 	var chunk = chunk_scene.instantiate()
-	chunk.position = Vector3(
-		cx * chunk.CHUNK_SIZE.x,
-		0,
-		cz * chunk.CHUNK_SIZE.z
-	)
-	chunk.world_noise = noise
+	chunk.chunk_x = cx
+	chunk.chunk_z = cz
+	chunk.world_noise = noise  # ✅ pass shared noise instance
+	chunk.position = Vector3(cx * CHUNK_SIZE.x, 0, cz * CHUNK_SIZE.z)
 	add_child(chunk)
 	loaded_chunks[Vector2i(cx, cz)] = chunk
