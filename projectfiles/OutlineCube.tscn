@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=3 uid="uid://b6atfthussjxb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xmtg6"]
+render_priority = 1
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0, 0, 0, 1)
+grow = true
+grow_amount = 0.1
+stencil_mode = 3
+stencil_flags = 1
+stencil_compare = 5
+metadata/_stencil_owned = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hq7qq"]
+next_pass = SubResource("StandardMaterial3D_xmtg6")
+transparency = 1
+no_depth_test = true
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.023529412)
+stencil_mode = 1
+stencil_flags = 2
+stencil_outline_thickness = 0.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_xmtg6"]
+material = SubResource("StandardMaterial3D_hq7qq")
+size = Vector3(1.1, 1.1, 1.1)
+
+[node name="OutlineCube" type="Node3D"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_xmtg6")

@@ -1,0 +1,27 @@
+[gd_scene load_steps=8 format=3 uid="uid://ba6r08lknaiwh"]
+
+[ext_resource type="Script" uid="uid://cgd0hlk6o0jil" path="res://world.gd" id="1_bcbcq"]
+[ext_resource type="PackedScene" uid="uid://cp2h6t3sic7v8" path="res://player.tscn" id="1_c6gwx"]
+[ext_resource type="PackedScene" uid="uid://c8ymnyvhups7o" path="res://Chunk.tscn" id="2_js7pq"]
+[ext_resource type="PackedScene" uid="uid://b6atfthussjxb" path="res://OutlineCube.tscn" id="4_js7pq"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_c6gwx"]
+
+[sub_resource type="Sky" id="Sky_2dftf"]
+sky_material = SubResource("ProceduralSkyMaterial_c6gwx")
+
+[sub_resource type="Environment" id="Environment_bcbcq"]
+background_mode = 2
+sky = SubResource("Sky_2dftf")
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_bcbcq")
+chunk_scene = ExtResource("2_js7pq")
+
+[node name="Player" parent="." instance=ExtResource("1_c6gwx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_bcbcq")
+
+[node name="OutlineCube" parent="." instance=ExtResource("4_js7pq")]
