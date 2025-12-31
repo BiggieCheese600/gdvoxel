@@ -5,8 +5,9 @@ const BLOCK_SIZE = 1.0
 const BLOCKS = {
 	0: { "name": "air",   "atlas_index": -1 },
 	1: { "name": "grass", "atlas_index": 0 },
-	2: { "name": "dirt",  "atlas_index": 1 },
-	3: { "name": "stone", "atlas_index": 2 },
+	2: { "name": "grassside", "atlas_index": 1},
+	3: { "name": "dirt",  "atlas_index": 2 },
+	4: { "name": "stone", "atlas_index": 3 },
 }
 
 var blocks = [] # 3D array storing block types
@@ -47,9 +48,9 @@ func generate_block_data():
 				elif y == height:
 					blocks[x][z][y] = 1  # grass
 				elif y >= height - 2:
-					blocks[x][z][y] = 2  # dirt
+					blocks[x][z][y] = 3  # dirt
 				else:
-					blocks[x][z][y] = 3  # stone
+					blocks[x][z][y] = 4  # stone
 
 func build_mesh():
 	var atlas_size = atlas.get_size()
@@ -87,33 +88,58 @@ func add_block_faces(st, x, y, z):
 	var pos = Vector3(x, y, z)
 	var block_type = blocks[x][z][y]
 
-	if is_air(x+1, y, z): add_face(st, pos, Vector3.RIGHT, block_type)
-	if is_air(x-1, y, z): add_face(st, pos, Vector3.LEFT, block_type)
-	if is_air(x, y+1, z): add_face(st, pos, Vector3.UP, block_type)
-	if is_air(x, y-1, z): add_face(st, pos, Vector3.DOWN, block_type)
-	if is_air(x, y, z+1): add_face(st, pos, Vector3.FORWARD, block_type)
-	if is_air(x, y, z-1): add_face(st, pos, Vector3.BACK, block_type)
+	# Determine face-specific texture
+	var top_type = block_type
+	var bottom_type = block_type
+	var side_type = block_type
+
+	if block_type == 1:  # grass
+		side_type = 2  # grassside
+		bottom_type = 3  # dirt
+
+	if is_air(x+1, y, z): add_face(st, pos, Vector3.RIGHT, side_type)
+	if is_air(x-1, y, z): add_face(st, pos, Vector3.LEFT, side_type)
+	if is_air(x, y+1, z): add_face(st, pos, Vector3.UP, top_type)
+	if is_air(x, y-1, z): add_face(st, pos, Vector3.DOWN, bottom_type)
+	if is_air(x, y, z+1): add_face(st, pos, Vector3.FORWARD, side_type)
+	if is_air(x, y, z-1): add_face(st, pos, Vector3.BACK, side_type)
 
 func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int):
-	# Skip air
 	if block_type == 0:
 		return
 
-	# Get UV rect for this block
 	var atlas_index = BLOCKS[block_type]["atlas_index"]
 	var uv_rect = get_uv_rect(atlas_index)
 
-	# Precompute UV corners
-	var uv1 = uv_rect.position
-	var uv2 = uv_rect.position + Vector2(uv_rect.size.x, 0)
-	var uv3 = uv_rect.position + uv_rect.size
-	var uv4 = uv_rect.position + Vector2(0, uv_rect.size.y)
+	# Default rotation
+	var rotation = 0
 
-	# Cube corner positions
+	# Apply per-face rotation
+	match normal:
+		Vector3.FORWARD:   # South
+			rotation = 90
+		Vector3.RIGHT:     # East
+			rotation = 180
+		Vector3.BACK:      # North
+			rotation = 180
+		Vector3.LEFT:      # West
+			rotation = 90
+		Vector3.UP:
+			rotation = 0
+		Vector3.DOWN:
+			rotation = 0
+
+	var uv = rotate_uv(uv_rect, rotation)
+
+	var uv_tl = uv["tl"]
+	var uv_tr = uv["tr"]
+	var uv_br = uv["br"]
+	var uv_bl = uv["bl"]
+
 	var x = pos.x
 	var y = pos.y
 	var z = pos.z
-	var s = 1.0  # block size
+	var s = 1.0
 
 	var v000 = Vector3(x,     y,     z)
 	var v001 = Vector3(x,     y,     z+s)
@@ -124,31 +150,30 @@ func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int):
 	var v110 = Vector3(x+s,   y+s,   z)
 	var v111 = Vector3(x+s,   y+s,   z+s)
 
-	# Match normal to face
 	match normal:
 		Vector3.UP:
-			_tri(st, v010, v110, v111, uv1, uv2, uv3, normal)
-			_tri(st, v111, v011, v010, uv3, uv4, uv1, normal)
+			_tri(st, v010, v110, v111, uv_tl, uv_tr, uv_br, normal)
+			_tri(st, v111, v011, v010, uv_br, uv_bl, uv_tl, normal)
 
 		Vector3.DOWN:
-			_tri(st, v000, v001, v101, uv1, uv2, uv3, normal)
-			_tri(st, v101, v100, v000, uv3, uv4, uv1, normal)
+			_tri(st, v000, v001, v101, uv_tl, uv_tr, uv_br, normal)
+			_tri(st, v101, v100, v000, uv_br, uv_bl, uv_tl, normal)
 
 		Vector3.LEFT:
-			_tri(st, v000, v010, v011, uv1, uv2, uv3, normal)
-			_tri(st, v011, v001, v000, uv3, uv4, uv1, normal)
+			_tri(st, v000, v010, v011, uv_tl, uv_tr, uv_br, normal)
+			_tri(st, v011, v001, v000, uv_br, uv_bl, uv_tl, normal)
 
 		Vector3.RIGHT:
-			_tri(st, v100, v101, v111, uv1, uv2, uv3, normal)
-			_tri(st, v111, v110, v100, uv3, uv4, uv1, normal)
+			_tri(st, v100, v101, v111, uv_tl, uv_tr, uv_br, normal)
+			_tri(st, v111, v110, v100, uv_br, uv_bl, uv_tl, normal)
 
 		Vector3.FORWARD:
-			_tri(st, v001, v011, v111, uv1, uv2, uv3, normal)
-			_tri(st, v111, v101, v001, uv3, uv4, uv1, normal)
+			_tri(st, v001, v011, v111, uv_tl, uv_tr, uv_br, normal)
+			_tri(st, v111, v101, v001, uv_br, uv_bl, uv_tl, normal)
 
 		Vector3.BACK:
-			_tri(st, v000, v100, v110, uv1, uv2, uv3, normal)
-			_tri(st, v110, v010, v000, uv3, uv4, uv1, normal)
+			_tri(st, v000, v100, v110, uv_tl, uv_tr, uv_br, normal)
+			_tri(st, v110, v010, v000, uv_br, uv_bl, uv_tl, normal)
 
 func destroy_block_at(world_pos: Vector3, normal: Vector3):
 	# Move slightly INSIDE the block you clicked
@@ -191,13 +216,17 @@ func place_block_at(x: int, y: int, z: int, block_type: int):
 
 func get_uv_rect(atlas_index: int) -> Rect2:
 	if atlas_index < 0:
-		return Rect2() # air or invalid
+		return Rect2()
 
 	var atlas_size = atlas.get_size()
 	var tiles_x = int(atlas_size.x / tile_size.x)
+	var tiles_y = int(atlas_size.y / tile_size.y)
 
 	var tile_x = atlas_index % tiles_x
 	var tile_y = atlas_index / tiles_x
+
+	# Flip Y because Godot UV origin is bottom-left
+	tile_y = tiles_y - 1 - tile_y
 
 	var uv_x = float(tile_x * tile_size.x) / atlas_size.x
 	var uv_y = float(tile_y * tile_size.y) / atlas_size.y
@@ -220,3 +249,24 @@ normal: Vector3):
 	st.set_normal(normal)
 	st.set_uv(uvc)
 	st.add_vertex(c)
+
+func rotate_uv(uv_rect: Rect2, rotation_degrees: int) -> Dictionary:
+	var tl = uv_rect.position
+	var tr = uv_rect.position + Vector2(uv_rect.size.x, 0)
+	var br = uv_rect.position + uv_rect.size
+	var bl = uv_rect.position + Vector2(0, uv_rect.size.y)
+
+	match rotation_degrees:
+		0:
+			return { "tl": tl, "tr": tr, "br": br, "bl": bl }
+
+		90, -270:
+			return { "tl": bl, "tr": tl, "br": tr, "bl": br }
+
+		180, -180:
+			return { "tl": br, "tr": bl, "br": tl, "bl": tr }
+
+		270, -90:
+			return { "tl": tr, "tr": br, "br": bl, "bl": tl }
+
+	return { "tl": tl, "tr": tr, "br": br, "bl": bl }

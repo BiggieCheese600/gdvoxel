@@ -3,15 +3,18 @@ extends CharacterBody3D
 var mouse = InputEventMouseMotion
 const SPEED = 10.0
 const SENSITIVITY = 0.003
-var debug = 1
+var debug = 0
 var captured = 1
 var selected_index := 0
 var selected_block := 1  # default to grass
-const BLOCK_TYPES = [1, 2, 3]  # grass, dirt, stone
+const BLOCK_TYPES = [1, 3, 4]  # grass, dirt, stone
+var paused = 0
 
 @onready var camera = $Camera3D
 @onready var outline = $"../OutlineCube"
-@onready var blocklabel = $CanvasLayer/BlockSelected
+@onready var blocklabel = $GUI/BlockSelected
+@onready var pausemenu = $PauseMenu
+@onready var gui = $GUI
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -43,6 +46,17 @@ func _unhandled_input(event):
 		var hit = get_block_target()
 		if hit:
 			place_block(hit)
+	if event.is_action_pressed("menu"):
+		if paused == 0:
+			gui.visible = false
+			pausemenu.visible = true
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+			captured = 0
+		else:
+			pausemenu.visible = false
+			gui.visible = true
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+			captured = 1
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -54,7 +68,12 @@ func _unhandled_input(event):
 
 
 func _physics_process(_delta):
-	blocklabel.text = "Block Selected: " + str(selected_block)
+	if selected_block == 1:
+		blocklabel.text = "Block Selected: Grass"
+	if selected_block == 3:
+		blocklabel.text = "Block Selected: Dirt"
+	if selected_block == 4:
+		blocklabel.text = "Block Selected: Stone"
 	update_outline()
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var direction = (camera.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -129,3 +148,14 @@ func place_block(hit):
 
 	var block_type = BLOCK_TYPES[selected_index]
 	chunk.place_block_at(x, y, z, block_type)
+
+
+func _on_resume_pressed() -> void:
+	pausemenu.visible = false
+	gui.visible = true
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	captured = 1
+
+
+func _on_quit_pressed() -> void:
+	get_tree().quit()
