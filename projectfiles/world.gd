@@ -1,9 +1,11 @@
 extends Node3D
 
 @export var chunk_scene: PackedScene
-@export var render_distance := 4
 var noise := FastNoiseLite.new()
-var loaded_chunks := {}
+
+# Dictionary storing chunks by chunk coordinate
+var loaded_chunks := {}   # Dictionary: Vector2i -> Chunk
+
 const Chunk = preload("res://chunk.gd")
 const CHUNK_SIZE = Vector3i(16, 64, 16)
 
@@ -18,9 +20,12 @@ func _ready():
 
 
 func _process(_delta):
+	var sliderval = $Player/PauseMenu/settingsarea/renderdistance.value
 	var player_pos = $Player.global_position
+
 	var cx = int(floor(player_pos.x / Chunk.CHUNK_SIZE.x))
 	var cz = int(floor(player_pos.z / Chunk.CHUNK_SIZE.z))
+	var render_distance = sliderval
 
 	for x in range(cx - render_distance, cx + render_distance + 1):
 		for z in range(cz - render_distance, cz + render_distance + 1):
@@ -28,11 +33,55 @@ func _process(_delta):
 			if not loaded_chunks.has(key):
 				spawn_chunk(x, z)
 
+
+# ---------------------------------------------------------
+#  CHUNK SPAWNING + REGISTRATION
+# ---------------------------------------------------------
 func spawn_chunk(cx, cz):
 	var chunk = chunk_scene.instantiate()
 	chunk.chunk_x = cx
 	chunk.chunk_z = cz
-	chunk.world_noise = noise  # ✅ pass shared noise instance
+	chunk.world_noise = noise
+	chunk.world = self   # 🔥 give chunk a reference to the world
+
 	chunk.position = Vector3(cx * CHUNK_SIZE.x, 0, cz * CHUNK_SIZE.z)
 	add_child(chunk)
+
 	loaded_chunks[Vector2i(cx, cz)] = chunk
+
+
+# ---------------------------------------------------------
+#  CHUNK LOOKUP
+# ---------------------------------------------------------
+func get_chunk(cx: int, cz: int):
+	return loaded_chunks.get(Vector2i(cx, cz), null)
+
+
+# ---------------------------------------------------------
+#  WORLD-LEVEL BLOCK PLACEMENT (GLOBAL COORDS)
+# ---------------------------------------------------------
+func set_block(global_x: int, global_y: int, global_z: int, block_type: int):
+	# Convert world coords → chunk coords
+	var cx = floori(float(global_x) / CHUNK_SIZE.x)
+	var cz = floori(float(global_z) / CHUNK_SIZE.z)
+
+	var chunk = get_chunk(cx, cz)
+	if chunk == null:
+		return  # Optionally: generate chunk here
+
+	# Convert world coords → local chunk coords (0..CHUNK_SIZE-1)
+	var local_x = global_x - cx * CHUNK_SIZE.x
+	var local_y = global_y
+	var local_z = global_z - cz * CHUNK_SIZE.z
+
+	print("global:", global_x, " cx:", cx, " local_x:", local_x)
+
+	# Safety: if somehow out of bounds, bail
+	if local_x < 0 or local_x >= CHUNK_SIZE.x:
+		return
+	if local_y < 0 or local_y >= CHUNK_SIZE.y:
+		return
+	if local_z < 0 or local_z >= CHUNK_SIZE.z:
+		return
+
+	chunk.place_block_at(local_x, local_y, local_z, block_type)

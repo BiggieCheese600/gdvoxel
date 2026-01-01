@@ -1,8 +1,65 @@
-[gd_scene load_steps=3 format=3 uid="uid://cp2h6t3sic7v8"]
+[gd_scene load_steps=17 format=3 uid="uid://cp2h6t3sic7v8"]
 
 [ext_resource type="Script" uid="uid://027djjrm3a3w" path="res://player.gd" id="1_4flbx"]
+[ext_resource type="Texture2D" uid="uid://b8ngwimeup7qi" path="res://hotbar1.png" id="2_ivps1"]
+[ext_resource type="Texture2D" uid="uid://bk1d8tdqvus8c" path="res://sun.png" id="2_onrkg"]
+[ext_resource type="Texture2D" uid="uid://d112wp6ckhy3t" path="res://hotbar2.png" id="3_urp6f"]
+[ext_resource type="Texture2D" uid="uid://kr8vid5ii1m7" path="res://hotbar3.png" id="4_bwjto"]
+[ext_resource type="Texture2D" uid="uid://buutlchn3gwo4" path="res://hotbar4.png" id="5_606se"]
+[ext_resource type="Texture2D" uid="uid://b6mmfsf1wpjaq" path="res://hotbar5.png" id="6_u1c27"]
+[ext_resource type="Texture2D" uid="uid://bspskpg3fb6lr" path="res://hotbar6.png" id="7_op7ga"]
+[ext_resource type="Texture2D" uid="uid://bntlkx5ccd52w" path="res://hotbar7.png" id="8_q13i1"]
+[ext_resource type="Texture2D" uid="uid://cs0higka5e4ir" path="res://hotbar8.png" id="9_pylmc"]
+[ext_resource type="Texture2D" uid="uid://dnuqijngyqwxs" path="res://hotbar9.png" id="10_pbfsw"]
+[ext_resource type="Texture2D" uid="uid://cytqo6kedljyo" path="res://hotbar10.png" id="11_5tmop"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_4flbx"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_7ahtn"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_ivps1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_urp6f")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_bwjto")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_606se")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_u1c27")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_op7ga")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_q13i1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_pylmc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_pbfsw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_5tmop")
+}],
+"loop": true,
+"name": &"hotbar",
+"speed": 5.0
+}]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_onrkg"]
+shading_mode = 0
+albedo_texture = ExtResource("2_onrkg")
+texture_filter = 0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_i3pqv"]
+size = Vector2(20, 20)
 
 [node name="Player" type="CharacterBody3D"]
 motion_mode = 1
@@ -25,13 +82,35 @@ text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="BlockSelected" type="Label" parent="GUI"]
-offset_right = 40.0
-offset_bottom = 23.0
-text = "Block Selected:"
+[node name="hotcontainer" type="Container" parent="GUI"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -40.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="hotbar" type="AnimatedSprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(0, -38.93)
+scale = Vector2(5, 5)
+sprite_frames = SubResource("SpriteFrames_7ahtn")
+animation = &"hotbar"
 
 [node name="PauseMenu" type="CanvasLayer" parent="."]
 visible = false
+
+[node name="ColorRect" type="ColorRect" parent="PauseMenu"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.3254902)
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu"]
 anchors_preset = 8
@@ -39,12 +118,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -35.0
-offset_top = -33.0
-offset_right = 35.0
-offset_bottom = 33.0
+offset_left = -69.57501
+offset_top = -101.06
+offset_right = 0.4249878
+offset_bottom = -0.059692383
 grow_horizontal = 2
 grow_vertical = 2
+scale = Vector2(2, 2)
 
 [node name="resume" type="Button" parent="PauseMenu/VBoxContainer"]
 layout_mode = 2
@@ -58,5 +138,42 @@ text = "Settings"
 layout_mode = 2
 text = "Quit"
 
+[node name="settingsarea" type="VBoxContainer" parent="PauseMenu"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -221.71002
+offset_top = -78.015015
+offset_right = -0.2098999
+offset_bottom = -0.0146484375
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(2, 2)
+
+[node name="back" type="Button" parent="PauseMenu/settingsarea"]
+layout_mode = 2
+text = "Back"
+
+[node name="renderlabel" type="Label" parent="PauseMenu/settingsarea"]
+layout_mode = 2
+text = "Render Distance: 4"
+
+[node name="renderdistance" type="HSlider" parent="PauseMenu/settingsarea"]
+layout_mode = 2
+min_value = 1.0
+max_value = 12.0
+value = 4.0
+
+[node name="sun" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.12251442, 0.69231987, -0.71111417, -0.71187955, -0.4379513, -0.54902273, -0.69153273, 0.5734909, 0.43919304, -36.483, 28.612, -41.308)
+material_override = SubResource("StandardMaterial3D_onrkg")
+mesh = SubResource("PlaneMesh_i3pqv")
+
 [connection signal="pressed" from="PauseMenu/VBoxContainer/resume" to="." method="_on_resume_pressed"]
+[connection signal="pressed" from="PauseMenu/VBoxContainer/settings" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="PauseMenu/VBoxContainer/quit" to="." method="_on_quit_pressed"]
+[connection signal="pressed" from="PauseMenu/settingsarea/back" to="." method="_on_back_pressed"]
+[connection signal="value_changed" from="PauseMenu/settingsarea/renderdistance" to="." method="_on_renderdistance_value_changed"]

@@ -13,6 +13,7 @@ const BLOCKS = {
 var blocks = [] # 3D array storing block types
 var world_noise: FastNoiseLite
 
+var world = get_parent()
 @export var atlas: Texture2D
 @export var atlas_material: StandardMaterial3D
 @export var tile_size := Vector2(16, 16)
@@ -202,10 +203,13 @@ func rebuild_mesh():
 	build_mesh()
 
 func place_block_at(x: int, y: int, z: int, block_type: int):
-	# Bounds check
-	if x < 0 or x >= CHUNK_SIZE.x: return
-	if y < 0 or y >= CHUNK_SIZE.y: return
-	if z < 0 or z >= CHUNK_SIZE.z: return
+	# Local bounds check only
+	if x < 0 or x >= CHUNK_SIZE.x:
+		return
+	if y < 0 or y >= CHUNK_SIZE.y:
+		return
+	if z < 0 or z >= CHUNK_SIZE.z:
+		return
 
 	# Only place if empty
 	if blocks[x][z][y] != 0:

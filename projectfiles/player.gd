@@ -15,8 +15,14 @@ var paused = 0
 @onready var blocklabel = $GUI/BlockSelected
 @onready var pausemenu = $PauseMenu
 @onready var gui = $GUI
+@onready var pausecontainer = $PauseMenu/VBoxContainer
+@onready var settingsarea = $PauseMenu/settingsarea
+@onready var renderlabel = $PauseMenu/settingsarea/renderlabel
+@onready var renderdistance = $PauseMenu/settingsarea/renderdistance
+@onready var hotbar = $GUI/hotcontainer/hotbar
 
 func _ready():
+	hotbar.frame = 0
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	captured = 1
 
@@ -60,20 +66,28 @@ func _unhandled_input(event):
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			selected_index = (selected_index + 1) % BLOCK_TYPES.size()
+			if hotbar.frame == 9:
+				hotbar.frame = 0
+			else:
+				hotbar.frame += 1
+			#selected_index = (selected_index + 1) % BLOCK_TYPES.size()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			selected_index = (selected_index - 1 + BLOCK_TYPES.size()) % BLOCK_TYPES.size()
+			if hotbar.frame == 0:
+				hotbar.frame = 9
+			else:
+				hotbar.frame -= 1
+			#selected_index = (selected_index - 1 + BLOCK_TYPES.size()) % BLOCK_TYPES.size()
 
-		selected_block = BLOCK_TYPES[selected_index]
+		#selected_block = BLOCK_TYPES[selected_index]
 
 
 func _physics_process(_delta):
-	if selected_block == 1:
-		blocklabel.text = "Block Selected: Grass"
-	if selected_block == 3:
-		blocklabel.text = "Block Selected: Dirt"
-	if selected_block == 4:
-		blocklabel.text = "Block Selected: Stone"
+	if hotbar.frame == 0:
+		selected_index = 0
+	if hotbar.frame == 1:
+		selected_index = 1
+	if hotbar.frame == 2:
+		selected_index = 2
 	update_outline()
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var direction = (camera.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -134,20 +148,20 @@ func get_block_coords(hit):
 	)
 
 func place_block(hit):
-	var chunk = hit.collider
-	if not chunk:
+	if selected_index != hotbar.frame:
 		return
+	var world = get_parent()
 
-	# Block to place INTO = hit.position + normal * 0.5
 	var pos = hit.position + hit.normal * 0.5
-	pos -= chunk.global_position
 
 	var x = int(floor(pos.x))
 	var y = int(floor(pos.y))
 	var z = int(floor(pos.z))
 
+	print("Global block coords: ", x, y, z)
+
 	var block_type = BLOCK_TYPES[selected_index]
-	chunk.place_block_at(x, y, z, block_type)
+	world.set_block(x, y, z, block_type)
 
 
 func _on_resume_pressed() -> void:
@@ -159,3 +173,17 @@ func _on_resume_pressed() -> void:
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()
+
+
+func _on_settings_pressed() -> void:
+	pausecontainer.visible = false
+	settingsarea.visible = true
+
+
+func _on_back_pressed() -> void:
+	settingsarea.visible = false
+	pausecontainer.visible = true
+
+
+func _on_renderdistance_value_changed(value: float) -> void:
+	renderlabel.text = "Render Distance: " + str(renderdistance.value)
