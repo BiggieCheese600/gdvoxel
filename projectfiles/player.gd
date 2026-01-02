@@ -3,12 +3,16 @@ extends CharacterBody3D
 var mouse = InputEventMouseMotion
 const SPEED = 10.0
 const SENSITIVITY = 0.003
-var debug = 0
+var debuginv = true
 var captured = 1
 var selected_index := 0
 var selected_block := 1  # default to grass
-const BLOCK_TYPES = [1, 3, 4]  # grass, dirt, stone
+const BLOCK_TYPES = [1, 3, 4]  # grass, dirt, stone (2 would be sides of grass)
 var paused = 0
+
+@export var grasstex: Texture2D
+@export var dirttex: Texture2D
+@export var stonetex: Texture2D
 
 @onready var camera = $Camera3D
 @onready var outline = $"../OutlineCube"
@@ -20,21 +24,25 @@ var paused = 0
 @onready var renderlabel = $PauseMenu/settingsarea/renderlabel
 @onready var renderdistance = $PauseMenu/settingsarea/renderdistance
 @onready var hotbar = $GUI/hotcontainer/hotbar
+@onready var slot1 = $GUI/hotcontainer/slot1
+@onready var slot2 = $GUI/hotcontainer/slot2
+@onready var slot3 = $GUI/hotcontainer/slot3
+@onready var slot4 = $GUI/hotcontainer/slot4
+@onready var slot5 = $GUI/hotcontainer/slot5
+@onready var slot6 = $GUI/hotcontainer/slot6
+@onready var slot7 = $GUI/hotcontainer/slot7
+@onready var slot8 = $GUI/hotcontainer/slot8
+@onready var slot9 = $GUI/hotcontainer/slot9
+@onready var slot10 = $GUI/hotcontainer/slot10
 
 func _ready():
 	hotbar.frame = 0
+	if debuginv == true:
+		slot1.texture = grasstex
+		slot2.texture = dirttex
+		slot3.texture = stonetex
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	captured = 1
-
-func _input(event):
-	if debug == 1:
-		if event.is_action_pressed("mouse_mode_switch"):
-			if captured == 1:
-				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-				captured = 0
-			else:
-				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-				captured = 1
 
 func _unhandled_input(event):
 	if event is InputEventMouseMotion and captured == 1:
@@ -82,12 +90,7 @@ func _unhandled_input(event):
 
 
 func _physics_process(_delta):
-	if hotbar.frame == 0:
-		selected_index = 0
-	if hotbar.frame == 1:
-		selected_index = 1
-	if hotbar.frame == 2:
-		selected_index = 2
+	check_slots()
 	update_outline()
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var direction = (camera.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
@@ -148,8 +151,9 @@ func get_block_coords(hit):
 	)
 
 func place_block(hit):
-	if selected_index != hotbar.frame:
+	if selected_index == -1:
 		return
+
 	var world = get_parent()
 
 	var pos = hit.position + hit.normal * 0.5
@@ -187,3 +191,135 @@ func _on_back_pressed() -> void:
 
 func _on_renderdistance_value_changed(value: float) -> void:
 	renderlabel.text = "Render Distance: " + str(renderdistance.value)
+
+func check_slots():
+	if hotbar.frame == 0:
+		check_slot1()
+	if hotbar.frame == 1:
+		check_slot2()
+	if hotbar.frame == 2:
+		check_slot3()
+	if hotbar.frame == 3:
+		check_slot4()
+	if hotbar.frame == 4:
+		check_slot5()
+	if hotbar.frame == 5:
+		check_slot6()
+	if hotbar.frame == 6:
+		check_slot7()
+	if hotbar.frame == 7:
+		check_slot8()
+	if hotbar.frame == 8:
+		check_slot9()
+	if hotbar.frame == 9:
+		check_slot10()
+
+func check_slot1():
+	var slottex = slot1.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot2():
+	var slottex = slot2.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot3():
+	var slottex = slot3.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot4():
+	var slottex = slot4.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot5():
+	var slottex = slot5.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot6():
+	var slottex = slot6.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot7():
+	var slottex = slot7.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot8():
+	var slottex = slot8.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot9():
+	var slottex = slot9.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1
+
+func check_slot10():
+	var slottex = slot10.texture
+	if slottex == grasstex:
+		selected_index = 0
+	if slottex == dirttex:
+		selected_index = 1
+	if slottex == stonetex:
+		selected_index = 2
+	if slottex == null:
+		selected_index = -1

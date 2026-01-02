@@ -1,10 +1,13 @@
-[gd_scene load_steps=17 format=3 uid="uid://cp2h6t3sic7v8"]
+[gd_scene load_steps=20 format=3 uid="uid://cp2h6t3sic7v8"]
 
 [ext_resource type="Script" uid="uid://027djjrm3a3w" path="res://player.gd" id="1_4flbx"]
+[ext_resource type="Texture2D" uid="uid://c1b5a5ladac2w" path="res://grass.png" id="2_606se"]
 [ext_resource type="Texture2D" uid="uid://b8ngwimeup7qi" path="res://hotbar1.png" id="2_ivps1"]
 [ext_resource type="Texture2D" uid="uid://bk1d8tdqvus8c" path="res://sun.png" id="2_onrkg"]
+[ext_resource type="Texture2D" uid="uid://ld1q0ijloh85" path="res://dirt.png" id="3_u1c27"]
 [ext_resource type="Texture2D" uid="uid://d112wp6ckhy3t" path="res://hotbar2.png" id="3_urp6f"]
 [ext_resource type="Texture2D" uid="uid://kr8vid5ii1m7" path="res://hotbar3.png" id="4_bwjto"]
+[ext_resource type="Texture2D" uid="uid://byjwi5w8cl3h2" path="res://stone.png" id="4_op7ga"]
 [ext_resource type="Texture2D" uid="uid://buutlchn3gwo4" path="res://hotbar4.png" id="5_606se"]
 [ext_resource type="Texture2D" uid="uid://b6mmfsf1wpjaq" path="res://hotbar5.png" id="6_u1c27"]
 [ext_resource type="Texture2D" uid="uid://bspskpg3fb6lr" path="res://hotbar6.png" id="7_op7ga"]
@@ -64,6 +67,9 @@ size = Vector2(20, 20)
 [node name="Player" type="CharacterBody3D"]
 motion_mode = 1
 script = ExtResource("1_4flbx")
+grasstex = ExtResource("2_606se")
+dirttex = ExtResource("3_u1c27")
+stonetex = ExtResource("4_op7ga")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 
@@ -100,6 +106,56 @@ position = Vector2(0, -38.93)
 scale = Vector2(5, 5)
 sprite_frames = SubResource("SpriteFrames_7ahtn")
 animation = &"hotbar"
+
+[node name="slot1" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(-360.25003, -39.000065)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot2" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(-280.00003, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot3" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(-200.00003, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot4" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(-120.00004, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot5" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(-40.000046, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot6" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(40.000008, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot7" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(120, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot8" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(200, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot9" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(280, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
+
+[node name="slot10" type="Sprite2D" parent="GUI/hotcontainer"]
+texture_filter = 1
+position = Vector2(360, -39.000004)
+scale = Vector2(3.1562502, 3.125016)
 
 [node name="PauseMenu" type="CanvasLayer" parent="."]
 visible = false
