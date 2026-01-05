@@ -54,9 +54,6 @@ func generate_block_data():
 					blocks[x][z][y] = 4  # stone
 
 func build_mesh():
-	var atlas_size = atlas.get_size()
-	var tiles_x = int(atlas_size.x / tile_size.x)
-	var tiles_y = int(atlas_size.y / tile_size.y)
 	var st = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 

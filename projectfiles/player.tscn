@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3 uid="uid://cp2h6t3sic7v8"]
+[gd_scene load_steps=22 format=3 uid="uid://cp2h6t3sic7v8"]
 
 [ext_resource type="Script" uid="uid://027djjrm3a3w" path="res://player.gd" id="1_4flbx"]
 [ext_resource type="Texture2D" uid="uid://b8ngwimeup7qi" path="res://hotbar1.png" id="2_ivps1"]
@@ -76,13 +76,21 @@ texture_filter = 0
 [sub_resource type="PlaneMesh" id="PlaneMesh_i3pqv"]
 size = Vector2(20, 20)
 
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_urp6f"]
+radius = 0.45
+height = 1.8
+
 [node name="Player" type="CharacterBody3D"]
+collision_layer = 5
+collision_mask = 5
 script = ExtResource("1_4flbx")
 grasstex = SubResource("AtlasTexture_bwjto")
 dirttex = SubResource("AtlasTexture_606se")
 stonetex = SubResource("AtlasTexture_u1c27")
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Head" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
@@ -238,6 +246,13 @@ value = 4.0
 transform = Transform3D(0.12251442, 0.69231987, -0.71111417, -0.71187955, -0.4379513, -0.54902273, -0.69153273, 0.5734909, 0.43919304, -36.483, 28.612, -41.308)
 material_override = SubResource("StandardMaterial3D_onrkg")
 mesh = SubResource("PlaneMesh_i3pqv")
+
+[node name="downcheck" type="Area3D" parent="."]
+collision_layer = 4
+collision_mask = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="downcheck"]
+shape = SubResource("CapsuleShape3D_urp6f")
 
 [connection signal="pressed" from="PauseMenu/VBoxContainer/resume" to="." method="_on_resume_pressed"]
 [connection signal="pressed" from="PauseMenu/VBoxContainer/settings" to="." method="_on_settings_pressed"]

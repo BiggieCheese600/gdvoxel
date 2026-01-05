@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://b6atfthussjxb"]
+[gd_scene load_steps=4 format=3 uid="uid://b6atfthussjxb"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hq7qq"]
 transparency = 1
@@ -12,7 +12,17 @@ stencil_outline_thickness = 0.1
 material = SubResource("StandardMaterial3D_hq7qq")
 size = Vector3(1.1, 1.1, 1.1)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_xmtg6"]
+size = Vector3(1.1, 1.1, 1.1)
+
 [node name="OutlineCube" type="Node3D"]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_xmtg6")
+
+[node name="Area3D" type="Area3D" parent="."]
+collision_layer = 4
+collision_mask = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("BoxShape3D_xmtg6")

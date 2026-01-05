@@ -18,8 +18,11 @@ var gravity = 9.8
 @export var dirttex: Texture2D
 @export var stonetex: Texture2D
 
-@onready var camera = $Camera3D
+@onready var downcheck: Area3D = $downcheck
+@onready var head = $Head
+@onready var camera = $Head/Camera3D
 @onready var outline = $"../OutlineCube"
+@onready var outlinecolarea: Area3D = $"../OutlineCube/Area3D"
 @onready var blocklabel = $GUI/BlockSelected
 @onready var pausemenu = $PauseMenu
 @onready var gui = $GUI
@@ -50,10 +53,9 @@ func _ready():
 
 func _unhandled_input(event):
 	if event is InputEventMouseMotion and captured == 1:
-		# Rotate the whole player horizontally (yaw)
-		camera.rotation.y -= event.relative.x * SENSITIVITY
-		# Rotate the whole player vertically (pitch)
-		camera.rotation.x = clamp(camera.rotation.x - event.relative.y * SENSITIVITY, deg_to_rad(-90), deg_to_rad(90))
+		head.rotate_y(-event.relative.x * SENSITIVITY)
+		camera.rotate_x(-event.relative.y * SENSITIVITY)
+		camera.rotation.x = clamp(camera.rotation.x, deg_to_rad(-90), deg_to_rad(90))
 	#breaking blocks
 	if event.is_action_pressed("break_block"):
 		var hit = get_block_hit()
@@ -106,7 +108,7 @@ func _physics_process(delta):
 		speed = WALK_SPEED
 	
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var direction = (camera.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+	var direction = (head.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	if direction:
 		velocity.x = direction.x * speed
 		velocity.z = direction.z * speed
@@ -165,6 +167,9 @@ func place_block(hit):
 	if selected_index == -1:
 		return
 
+	if outlinecolarea.overlaps_area(downcheck):
+		return
+
 	var world = get_parent()
 
 	var pos = hit.position + hit.normal * 0.5
@@ -172,8 +177,6 @@ func place_block(hit):
 	var x = int(floor(pos.x))
 	var y = int(floor(pos.y))
 	var z = int(floor(pos.z))
-
-	print("Global block coords: ", x, y, z)
 
 	var block_type = BLOCK_TYPES[selected_index]
 	world.set_block(x, y, z, block_type)
