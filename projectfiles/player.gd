@@ -1,7 +1,10 @@
 extends CharacterBody3D
 
 var mouse = InputEventMouseMotion
-const SPEED = 10.0
+const WALK_SPEED = 5.0
+const SPRINT_SPEED = 8.0
+const JUMP_VELOCITY = 4.5
+var speed
 const SENSITIVITY = 0.003
 var debuginv = true
 var captured = 1
@@ -9,6 +12,7 @@ var selected_index := 0
 var selected_block := 1  # default to grass
 const BLOCK_TYPES = [1, 3, 4]  # grass, dirt, stone (2 would be sides of grass)
 var paused = 0
+var gravity = 9.8
 
 @export var grasstex: Texture2D
 @export var dirttex: Texture2D
@@ -74,34 +78,41 @@ func _unhandled_input(event):
 
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			if hotbar.frame == 9:
-				hotbar.frame = 0
-			else:
-				hotbar.frame += 1
-			#selected_index = (selected_index + 1) % BLOCK_TYPES.size()
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			if hotbar.frame == 0:
 				hotbar.frame = 9
 			else:
 				hotbar.frame -= 1
-			#selected_index = (selected_index - 1 + BLOCK_TYPES.size()) % BLOCK_TYPES.size()
+			#selected_index = (selected_index + 1) % BLOCK_TYPES.size()
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			if hotbar.frame == 9:
+				hotbar.frame = 0
+			else:
+				hotbar.frame += 1
 
-		#selected_block = BLOCK_TYPES[selected_index]
 
-
-func _physics_process(_delta):
+func _physics_process(delta):
 	check_slots()
 	update_outline()
+	
+	if not is_on_floor():
+		velocity.y -= gravity * delta
+
+	if Input.is_action_just_pressed("jump") and is_on_floor():
+		velocity.y = JUMP_VELOCITY
+
+	if Input.is_action_pressed("sprint"):
+		speed = SPRINT_SPEED
+	else:
+		speed = WALK_SPEED
+	
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var direction = (camera.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	if direction:
-		velocity.x = direction.x * SPEED
-		velocity.z = direction.z * SPEED
-		velocity.y = direction.y * SPEED
+		velocity.x = direction.x * speed
+		velocity.z = direction.z * speed
 	else:
-		velocity.x = move_toward(velocity.x, 0, SPEED)
-		velocity.z = move_toward(velocity.z, 0, SPEED)
-		velocity.y = move_toward(velocity.x, 0, SPEED)
+		velocity.x = lerp(velocity.x, direction.x * speed, delta * 7.0)
+		velocity.z = lerp(velocity.z, direction.z * speed, delta * 7.0)
 
 	move_and_slide()
 
