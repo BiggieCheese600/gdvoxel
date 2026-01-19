@@ -8,6 +8,8 @@ const BLOCKS = {
 	2: { "name": "grassside", "atlas_index": 1},
 	3: { "name": "dirt",  "atlas_index": 2 },
 	4: { "name": "stone", "atlas_index": 3 },
+	5: { "name": "sand", "atlas_index": 4 },
+	6: { "name": "water", "atlas_index": 5 },
 }
 
 var blocks = [] # 3D array storing block types

@@ -10,13 +10,15 @@ var debuginv = true
 var captured = 1
 var selected_index := 0
 var selected_block := 1  # default to grass
-const BLOCK_TYPES = [1, 3, 4]  # grass, dirt, stone (2 would be sides of grass)
+const BLOCK_TYPES = [1, 3, 4, 5, 6]  # grass, dirt, stone (2 would be sides of grass)
 var paused = 0
 var gravity = 9.8
 
 @export var grasstex: Texture2D
 @export var dirttex: Texture2D
 @export var stonetex: Texture2D
+@export var sandtex: Texture2D
+@export var watertex: Texture2D
 
 @onready var downcheck: Area3D = $downcheck
 @onready var head = $Head
@@ -48,6 +50,8 @@ func _ready():
 		slot1.texture = grasstex
 		slot2.texture = dirttex
 		slot3.texture = stonetex
+		slot4.texture = sandtex
+		slot5.texture = watertex
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	captured = 1
 
@@ -236,6 +240,10 @@ func check_slot1():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -247,6 +255,10 @@ func check_slot2():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -258,6 +270,10 @@ func check_slot3():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -269,6 +285,10 @@ func check_slot4():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -280,6 +300,10 @@ func check_slot5():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -291,6 +315,10 @@ func check_slot6():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -302,6 +330,10 @@ func check_slot7():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -313,6 +345,10 @@ func check_slot8():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -324,6 +360,10 @@ func check_slot9():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
 
@@ -335,5 +375,9 @@ func check_slot10():
 		selected_index = 1
 	if slottex == stonetex:
 		selected_index = 2
+	if slottex == sandtex:
+		selected_index = 3
+	if slottex == watertex:
+		selected_index = 4
 	if slottex == null:
 		selected_index = -1
