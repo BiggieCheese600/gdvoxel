@@ -7,7 +7,7 @@ var noise := FastNoiseLite.new()
 var loaded_chunks := {}   # Dictionary: Vector2i -> Chunk
 
 const Chunk = preload("res://chunk.gd")
-const CHUNK_SIZE = Vector3i(16, 64, 16)
+const CHUNK_SIZE = Vector3i(16, 256, 16)
 
 func _ready():
 	noise.seed = randi()

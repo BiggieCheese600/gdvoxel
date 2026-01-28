@@ -1,6 +1,6 @@
 extends StaticBody3D
 
-const CHUNK_SIZE = Vector3i(16, 64, 16) # width, height, depth
+const CHUNK_SIZE = Vector3i(16, 256, 16) # width, height, depth
 const BLOCK_SIZE = 1.0
 const BLOCKS = {
 	0: { "name": "air",   "atlas_index": -1 },
@@ -41,7 +41,7 @@ func generate_block_data():
 
 			# Noise height
 			var raw = world_noise.get_noise_2d(world_x, world_z)
-			var height = int((raw + 1.0) * 0.5 * CHUNK_SIZE.y)
+			var height = int((raw + 1.0) * 0.15 * CHUNK_SIZE.y/2) # change multiplying val to change variance in height (amplification), change division val to change space between highest block and height limite
 			height = clamp(height, 0, CHUNK_SIZE.y - 1)
 
 			# Fill vertical column

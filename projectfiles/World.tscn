@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://ba6r08lknaiwh"]
+[gd_scene format=3 uid="uid://ba6r08lknaiwh"]
 
 [ext_resource type="Script" uid="uid://cgd0hlk6o0jil" path="res://world.gd" id="1_bcbcq"]
 [ext_resource type="PackedScene" uid="uid://cp2h6t3sic7v8" path="res://player.tscn" id="1_c6gwx"]
@@ -17,14 +17,14 @@ background_mode = 1
 background_color = Color(0.6245498, 0.74971235, 1, 1)
 sky = SubResource("Sky_eu7l1")
 
-[node name="Node3D" type="Node3D"]
+[node name="Node3D" type="Node3D" unique_id=321214673]
 script = ExtResource("1_bcbcq")
 chunk_scene = ExtResource("2_js7pq")
 
-[node name="Player" parent="." instance=ExtResource("1_c6gwx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 50, 0)
+[node name="Player" parent="." unique_id=364728494 instance=ExtResource("1_c6gwx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 128, 0)
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1965949511]
 environment = SubResource("Environment_bcbcq")
 
-[node name="OutlineCube" parent="." instance=ExtResource("4_js7pq")]
+[node name="OutlineCube" parent="." unique_id=904251112 instance=ExtResource("4_js7pq")]
