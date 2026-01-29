@@ -11,6 +11,7 @@ const BLOCKS = {
 	5: { "name": "sand", "atlas_index": 4 },
 	6: { "name": "water", "atlas_index": 5 },
 }
+const WATER_LEVEL = 63.0
 
 var blocks = [] # 3D array storing block types
 var world_noise: FastNoiseLite
@@ -41,7 +42,7 @@ func generate_block_data():
 
 			# Noise height
 			var raw = world_noise.get_noise_2d(world_x, world_z)
-			var height = int((raw + 1.0) * 0.15 * CHUNK_SIZE.y/2) # change multiplying val to change variance in height (amplification), change division val to change space between highest block and height limite
+			var height = int((raw + 5.0) * 0.1 * CHUNK_SIZE.y/2) # change multiplying val to change variance in height (amplification), change division val to change space between highest block and height limite
 			height = clamp(height, 0, CHUNK_SIZE.y - 1)
 
 			# Fill vertical column
@@ -88,6 +89,9 @@ func add_block_faces(st, x, y, z):
 	var pos = Vector3(x, y, z)
 	var block_type = blocks[x][z][y]
 
+	if y == WATER_LEVEL:
+		block_type = 6
+
 	# Determine face-specific texture
 	var top_type = block_type
 	var bottom_type = block_type
@@ -97,12 +101,16 @@ func add_block_faces(st, x, y, z):
 		side_type = 2  # grassside
 		bottom_type = 3  # dirt
 
-	if is_air(x+1, y, z): add_face(st, pos, Vector3.RIGHT, side_type)
-	if is_air(x-1, y, z): add_face(st, pos, Vector3.LEFT, side_type)
-	if is_air(x, y+1, z): add_face(st, pos, Vector3.UP, top_type)
-	if is_air(x, y-1, z): add_face(st, pos, Vector3.DOWN, bottom_type)
-	if is_air(x, y, z+1): add_face(st, pos, Vector3.FORWARD, side_type)
-	if is_air(x, y, z-1): add_face(st, pos, Vector3.BACK, side_type)
+	if y == WATER_LEVEL:
+		add_face(st, pos, Vector3.UP, top_type)
+
+	if y != WATER_LEVEL:
+		if is_air(x+1, y, z): add_face(st, pos, Vector3.RIGHT, side_type)
+		if is_air(x-1, y, z): add_face(st, pos, Vector3.LEFT, side_type)
+		if is_air(x, y+1, z): add_face(st, pos, Vector3.UP, top_type)
+		if is_air(x, y-1, z): add_face(st, pos, Vector3.DOWN, bottom_type)
+		if is_air(x, y, z+1): add_face(st, pos, Vector3.FORWARD, side_type)
+		if is_air(x, y, z-1): add_face(st, pos, Vector3.BACK, side_type)
 
 func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int):
 	if block_type == 0:

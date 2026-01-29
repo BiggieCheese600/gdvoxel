@@ -43,6 +43,7 @@ var gravity = 9.8
 @onready var slot8 = $GUI/hotcontainer/slot8
 @onready var slot9 = $GUI/hotcontainer/slot9
 @onready var slot10 = $GUI/hotcontainer/slot10
+@onready var coordlabel = $GUI/coords
 
 func _ready():
 	hotbar.frame = 0
@@ -119,6 +120,8 @@ func _physics_process(delta):
 	else:
 		velocity.x = lerp(velocity.x, direction.x * speed, delta * 7.0)
 		velocity.z = lerp(velocity.z, direction.z * speed, delta * 7.0)
+
+	update_coordlabel()
 
 	move_and_slide()
 
@@ -381,3 +384,6 @@ func check_slot10():
 		selected_index = 4
 	if slottex == null:
 		selected_index = -1
+
+func update_coordlabel():
+	coordlabel.text = "XYZ: " + str(round(self.position.x)) + ", " + str(round(self.position.y)) + ", " + str(round(self.position.z))
