@@ -22,7 +22,7 @@ script = ExtResource("1_bcbcq")
 chunk_scene = ExtResource("2_js7pq")
 
 [node name="Player" parent="." unique_id=364728494 instance=ExtResource("1_c6gwx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 128, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 256, 0)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1965949511]
 environment = SubResource("Environment_bcbcq")

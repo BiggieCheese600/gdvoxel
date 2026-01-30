@@ -1,6 +1,6 @@
 extends StaticBody3D
 
-const CHUNK_SIZE = Vector3i(16, 256, 16) # width, height, depth
+const CHUNK_SIZE = Vector3i(16, 384, 16) # width, height, depth
 const BLOCK_SIZE = 1.0
 const BLOCKS = {
 	0: { "name": "air",   "atlas_index": -1 },
@@ -11,7 +11,7 @@ const BLOCKS = {
 	5: { "name": "sand", "atlas_index": 4 },
 	6: { "name": "water", "atlas_index": 5 },
 }
-const WATER_LEVEL = 63.0
+const WATER_LEVEL = 129.0
 
 var blocks = [] # 3D array storing block types
 var world_noise: FastNoiseLite
@@ -42,13 +42,16 @@ func generate_block_data():
 
 			# Noise height
 			var raw = world_noise.get_noise_2d(world_x, world_z)
-			var height = int((raw + 5.0) * 0.1 * CHUNK_SIZE.y/2) # change multiplying val to change variance in height (amplification), change division val to change space between highest block and height limite
+			var height = int((raw + 7.0) * 0.099 * CHUNK_SIZE.y/2) # change multiplying val to change variance in height (amplification)
 			height = clamp(height, 0, CHUNK_SIZE.y - 1)
 
 			# Fill vertical column
 			for y in range(CHUNK_SIZE.y):
 				if y > height:
-					blocks[x][z][y] = 0  # air
+					if y == WATER_LEVEL:
+						blocks[x][z][y] = 6  # water
+					else:
+						blocks[x][z][y] = 0  # air
 				elif y == height:
 					blocks[x][z][y] = 1  # grass
 				elif y >= height - 2:
@@ -57,27 +60,39 @@ func generate_block_data():
 					blocks[x][z][y] = 4  # stone
 
 func build_mesh():
-	var st = SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var st_visual = SurfaceTool.new()
+	var st_collision = SurfaceTool.new()
+
+	st_visual.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st_collision.begin(Mesh.PRIMITIVE_TRIANGLES)
 
 	for x in CHUNK_SIZE.x:
 		for y in CHUNK_SIZE.y:
 			for z in CHUNK_SIZE.z:
-				if blocks[x][z][y] == 0:
+				var block_type = blocks[x][z][y]
+				if block_type == 0:
 					continue
 
-				add_block_faces(st, x, y, z)
+				# Add faces to visual mesh
+				add_block_faces(st_visual, x, y, z)
 
-	var mesh = st.commit()
+				# Skip water for collision
+				if block_type != 6:
+					add_block_faces(st_collision, x, y, z)
 
+	var mesh_visual = st_visual.commit()
+	var mesh_collision = st_collision.commit()
+
+	# Visual mesh
 	var mesh_instance = MeshInstance3D.new()
-	mesh_instance.mesh = mesh
-	mesh_instance.material_override = atlas_material # or whatever material you're using
+	mesh_instance.mesh = mesh_visual
+	mesh_instance.material_override = atlas_material
 	add_child(mesh_instance)
 
+	# Collision mesh
 	var col = CollisionShape3D.new()
-	col.shape = mesh.create_trimesh_shape()
-	add_child(col)  # attach to mesh instance
+	col.shape = mesh_collision.create_trimesh_shape()
+	add_child(col)
 
 func is_air(x, y, z):
 	if x < 0 or x >= CHUNK_SIZE.x: return true
@@ -89,28 +104,78 @@ func add_block_faces(st, x, y, z):
 	var pos = Vector3(x, y, z)
 	var block_type = blocks[x][z][y]
 
-	if y == WATER_LEVEL:
-		block_type = 6
+	var wx = chunk_x * CHUNK_SIZE.x + x
+	var wy = y
+	var wz = chunk_z * CHUNK_SIZE.z + z
 
-	# Determine face-specific texture
+	# ---------------------------------------------------------
+	# WATER: ONLY TOP FACE
+	# ---------------------------------------------------------
+	if block_type == 6:
+		# Only draw top if above is transparent (air or water)
+		if (y + 1 < CHUNK_SIZE.y and is_transparent_local(x, y + 1, z)) \
+		or (y + 1 >= CHUNK_SIZE.y and is_transparent_global(wx, wy + 1, wz)):
+			add_face(st, pos, Vector3.UP, 6)
+		return
+
+	# ---------------------------------------------------------
+	# NORMAL BLOCKS
+	# ---------------------------------------------------------
 	var top_type = block_type
 	var bottom_type = block_type
 	var side_type = block_type
 
 	if block_type == 1:  # grass
-		side_type = 2  # grassside
-		bottom_type = 3  # dirt
+		side_type = 2
+		bottom_type = 3
 
-	if y == WATER_LEVEL:
-		add_face(st, pos, Vector3.UP, top_type)
+	# +X
+	if x + 1 < CHUNK_SIZE.x:
+		if is_transparent_local(x + 1, y, z):
+			add_face(st, pos, Vector3.RIGHT, side_type)
+	else:
+		if is_transparent_global(wx + 1, wy, wz):
+			add_face(st, pos, Vector3.RIGHT, side_type)
 
-	if y != WATER_LEVEL:
-		if is_air(x+1, y, z): add_face(st, pos, Vector3.RIGHT, side_type)
-		if is_air(x-1, y, z): add_face(st, pos, Vector3.LEFT, side_type)
-		if is_air(x, y+1, z): add_face(st, pos, Vector3.UP, top_type)
-		if is_air(x, y-1, z): add_face(st, pos, Vector3.DOWN, bottom_type)
-		if is_air(x, y, z+1): add_face(st, pos, Vector3.FORWARD, side_type)
-		if is_air(x, y, z-1): add_face(st, pos, Vector3.BACK, side_type)
+	# -X
+	if x - 1 >= 0:
+		if is_transparent_local(x - 1, y, z):
+			add_face(st, pos, Vector3.LEFT, side_type)
+	else:
+		if is_transparent_global(wx - 1, wy, wz):
+			add_face(st, pos, Vector3.LEFT, side_type)
+
+	# +Y
+	if y + 1 < CHUNK_SIZE.y:
+		if is_transparent_local(x, y + 1, z):
+			add_face(st, pos, Vector3.UP, top_type)
+	else:
+		if is_transparent_global(wx, wy + 1, wz):
+			add_face(st, pos, Vector3.UP, top_type)
+
+	# -Y
+	if y - 1 >= 0:
+		if is_transparent_local(x, y - 1, z):
+			add_face(st, pos, Vector3.DOWN, bottom_type)
+	else:
+		if is_transparent_global(wx, wy - 1, wz):
+			add_face(st, pos, Vector3.DOWN, bottom_type)
+
+	# +Z
+	if z + 1 < CHUNK_SIZE.z:
+		if is_transparent_local(x, y, z + 1):
+			add_face(st, pos, Vector3.FORWARD, side_type)
+	else:
+		if is_transparent_global(wx, wy, wz + 1):
+			add_face(st, pos, Vector3.FORWARD, side_type)
+
+	# -Z
+	if z - 1 >= 0:
+		if is_transparent_local(x, y, z - 1):
+			add_face(st, pos, Vector3.BACK, side_type)
+	else:
+		if is_transparent_global(wx, wy, wz - 1):
+			add_face(st, pos, Vector3.BACK, side_type)
 
 func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int):
 	if block_type == 0:
@@ -281,3 +346,21 @@ func rotate_uv(uv_rect: Rect2, rotation_degrees: int) -> Dictionary:
 			return { "tl": tr, "tr": br, "br": bl, "bl": tl }
 
 	return { "tl": tl, "tr": tr, "br": br, "bl": bl }
+
+func is_transparent_local(x, y, z) -> bool:
+	if x < 0 or x >= CHUNK_SIZE.x: return true
+	if y < 0 or y >= CHUNK_SIZE.y: return true
+	if z < 0 or z >= CHUNK_SIZE.z: return true
+
+	var t = blocks[x][z][y]
+	return t == 0 or t == 6  # air or water
+
+func is_water(x, y, z):
+	if x < 0 or x >= CHUNK_SIZE.x: return false
+	if y < 0 or y >= CHUNK_SIZE.y: return false
+	if z < 0 or z >= CHUNK_SIZE.z: return false
+	return blocks[x][z][y] == 6
+
+func is_transparent_global(wx, wy, wz) -> bool:
+	var t = world.get_block(wx, wy, wz)
+	return t == 0 or t == 6  # air or water

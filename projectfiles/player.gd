@@ -386,4 +386,4 @@ func check_slot10():
 		selected_index = -1
 
 func update_coordlabel():
-	coordlabel.text = "XYZ: " + str(round(self.position.x)) + ", " + str(round(self.position.y)) + ", " + str(round(self.position.z))
+	coordlabel.text = "XYZ: " + str(round(self.position.x)) + ", " + str(round(self.position.y - 65)) + ", " + str(round(self.position.z))

@@ -7,7 +7,7 @@ var noise := FastNoiseLite.new()
 var loaded_chunks := {}   # Dictionary: Vector2i -> Chunk
 
 const Chunk = preload("res://chunk.gd")
-const CHUNK_SIZE = Vector3i(16, 256, 16)
+const CHUNK_SIZE = Vector3i(16, 384, 16)
 
 func _ready():
 	noise.seed = randi()
@@ -33,21 +33,44 @@ func _process(_delta):
 			if not loaded_chunks.has(key):
 				spawn_chunk(x, z)
 
+# ------------------------------
+# CHUNK UNLOADING
+# ------------------------------
+
+	var chunks_to_unload: Array = []
+
+	for key in loaded_chunks.keys():
+		var chunk_pos: Vector2i = key
+		var dx = chunk_pos.x - cx
+		var dz = chunk_pos.y - cz
+
+		if abs(dx) > render_distance or abs(dz) > render_distance:
+			chunks_to_unload.append(chunk_pos)
+
+	for key in chunks_to_unload:
+		var chunk = loaded_chunks[key]
+		if chunk:
+			chunk.queue_free()
+		loaded_chunks.erase(key)
 
 # ---------------------------------------------------------
 #  CHUNK SPAWNING + REGISTRATION
 # ---------------------------------------------------------
+
 func spawn_chunk(cx, cz):
 	var chunk = chunk_scene.instantiate()
 	chunk.chunk_x = cx
 	chunk.chunk_z = cz
 	chunk.world_noise = noise
-	chunk.world = self   # 🔥 give chunk a reference to the world
+	chunk.world = self
 
 	chunk.position = Vector3(cx * CHUNK_SIZE.x, 0, cz * CHUNK_SIZE.z)
 	add_child(chunk)
 
 	loaded_chunks[Vector2i(cx, cz)] = chunk
+
+	# ✅ build mesh AFTER registration
+	chunk.build_mesh()
 
 
 # ---------------------------------------------------------
@@ -85,3 +108,21 @@ func set_block(global_x: int, global_y: int, global_z: int, block_type: int):
 		return
 
 	chunk.place_block_at(local_x, local_y, local_z, block_type)
+
+func get_block(global_x: int, global_y: int, global_z: int) -> int:
+	var cx = floori(float(global_x) / CHUNK_SIZE.x)
+	var cz = floori(float(global_z) / CHUNK_SIZE.z)
+
+	var chunk = get_chunk(cx, cz)
+	if chunk == null:
+		return 0  # treat missing chunks as air
+
+	var local_x = global_x - cx * CHUNK_SIZE.x
+	var local_y = global_y
+	var local_z = global_z - cz * CHUNK_SIZE.z
+
+	if local_x < 0 or local_x >= CHUNK_SIZE.x: return 0
+	if local_y < 0 or local_y >= CHUNK_SIZE.y: return 0
+	if local_z < 0 or local_z >= CHUNK_SIZE.z: return 0
+
+	return chunk.blocks[local_x][local_z][local_y]
