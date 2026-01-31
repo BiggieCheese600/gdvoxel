@@ -283,9 +283,9 @@ func place_block_at(x: int, y: int, z: int, block_type: int):
 	if z < 0 or z >= CHUNK_SIZE.z:
 		return
 
-	# Only place if empty
-	if blocks[x][z][y] != 0:
-		return
+	if blocks[x][z][y] != 6:
+		if blocks[x][z][y] != 0:
+			return
 
 	blocks[x][z][y] = block_type
 	rebuild_mesh()

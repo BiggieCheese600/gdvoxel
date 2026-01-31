@@ -1,13 +1,13 @@
-[gd_scene load_steps=4 format=3 uid="uid://c8ymnyvhups7o"]
+[gd_scene format=3 uid="uid://c8ymnyvhups7o"]
 
 [ext_resource type="Script" uid="uid://dfl6h5lpag28l" path="res://chunk.gd" id="1_lexys"]
-[ext_resource type="Texture2D" uid="uid://d3xuhfvhlbxv8" path="res://textureatlas.png" id="2_s3wkh"]
+[ext_resource type="Texture2D" uid="uid://d3xuhfvhlbxv8" path="res://blockatlas.png" id="2_s3wkh"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_s3wkh"]
 albedo_texture = ExtResource("2_s3wkh")
 texture_filter = 0
 
-[node name="Chunk" type="StaticBody3D"]
+[node name="Chunk" type="StaticBody3D" unique_id=1015662738]
 script = ExtResource("1_lexys")
 atlas = ExtResource("2_s3wkh")
 atlas_material = SubResource("StandardMaterial3D_s3wkh")
