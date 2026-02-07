@@ -38,6 +38,10 @@ region = Rect2(80, 0, 16, 0)
 radius = 0.45
 height = 1.8
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_q13i1"]
+atlas = ExtResource("2_urp6f")
+region = Rect2(80, 0, 16, 0)
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_7ahtn"]
 animations = [{
 "frames": [{
@@ -105,6 +109,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1953853717]
 shape = SubResource("CapsuleShape3D_606se")
+
+[node name="waterlay" type="Sprite2D" parent="." unique_id=141745221]
+visible = false
+modulate = Color(1, 1, 1, 0.34509805)
+texture_filter = 1
+position = Vector2(959.99994, 539.99994)
+scale = Vector2(119.99999, 67.49999)
+texture = SubResource("AtlasTexture_q13i1")
 
 [node name="GUI" type="CanvasLayer" parent="." unique_id=1665299607]
 
@@ -186,11 +198,19 @@ texture_filter = 1
 position = Vector2(360, -39.000004)
 scale = Vector2(3.1562502, 3.125016)
 
-[node name="coords" type="Label" parent="GUI" unique_id=1185608410]
+[node name="debugmenu" type="VBoxContainer" parent="GUI" unique_id=92432648]
 offset_right = 40.0
-offset_bottom = 23.0
+offset_bottom = 40.0
+
+[node name="coords" type="Label" parent="GUI/debugmenu" unique_id=1185608410]
+layout_mode = 2
 theme_override_font_sizes/font_size = 40
 text = "XYZ: "
+
+[node name="ocpblock" type="Label" parent="GUI/debugmenu" unique_id=907479864]
+layout_mode = 2
+text = "Inside block type:"
+vertical_alignment = 1
 
 [node name="PauseMenu" type="CanvasLayer" parent="." unique_id=843278380]
 visible = false

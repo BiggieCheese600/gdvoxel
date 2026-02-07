@@ -1,6 +1,8 @@
 extends StaticBody3D
 
 const CHUNK_SIZE = Vector3i(16, 384, 16) # width, height, depth
+const ATLAS_TILE_COUNT := 6
+const uv_size := 1.0 / ATLAS_TILE_COUNT
 const BLOCK_SIZE = 1.0
 const BLOCKS = {
 	0: { "name": "air",   "atlas_index": -1 },
@@ -48,7 +50,7 @@ func generate_block_data():
 			# Fill vertical column
 			for y in range(CHUNK_SIZE.y):
 				if y > height:
-					if y == WATER_LEVEL:
+					if y <= WATER_LEVEL:
 						blocks[x][z][y] = 6  # water
 					else:
 						blocks[x][z][y] = 0  # air
@@ -112,10 +114,17 @@ func add_block_faces(st, x, y, z):
 	# WATER: ONLY TOP FACE
 	# ---------------------------------------------------------
 	if block_type == 6:
-		# Only draw top if above is transparent (air or water)
-		if (y + 1 < CHUNK_SIZE.y and is_transparent_local(x, y + 1, z)) \
-		or (y + 1 >= CHUNK_SIZE.y and is_transparent_global(wx, wy + 1, wz)):
+		var top_is_air := false
+
+		if y + 1 < CHUNK_SIZE.y:
+			top_is_air = is_air_local(x, y + 1, z)
+		else:
+			top_is_air = is_air_global(wx, wy + 1, wz)
+
+		if top_is_air:
+			# Normal top face
 			add_face(st, pos, Vector3.UP, 6)
+
 		return
 
 	# ---------------------------------------------------------
@@ -177,25 +186,23 @@ func add_block_faces(st, x, y, z):
 		if is_transparent_global(wx, wy, wz - 1):
 			add_face(st, pos, Vector3.BACK, side_type)
 
-func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int):
+func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int, flip := false):
 	if block_type == 0:
 		return
 
 	var atlas_index = BLOCKS[block_type]["atlas_index"]
 	var uv_rect = get_uv_rect(atlas_index)
 
-	# Default rotation
 	var rotation = 0
 
-	# Apply per-face rotation
 	match normal:
-		Vector3.FORWARD:   # South
+		Vector3.FORWARD:
 			rotation = 90
-		Vector3.RIGHT:     # East
+		Vector3.RIGHT:
 			rotation = 180
-		Vector3.BACK:      # North
+		Vector3.BACK:
 			rotation = 180
-		Vector3.LEFT:      # West
+		Vector3.LEFT:
 			rotation = 90
 		Vector3.UP:
 			rotation = 0
@@ -225,8 +232,14 @@ func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int):
 
 	match normal:
 		Vector3.UP:
+			# Normal top face
 			_tri(st, v010, v110, v111, uv_tl, uv_tr, uv_br, normal)
 			_tri(st, v111, v011, v010, uv_br, uv_bl, uv_tl, normal)
+
+			# Only water gets a flipped underside
+			if block_type == 6:
+				_tri(st, v010, v111, v110, uv_tl, uv_br, uv_tr, normal)
+				_tri(st, v111, v010, v011, uv_br, uv_tl, uv_bl, normal)
 
 		Vector3.DOWN:
 			_tri(st, v000, v001, v101, uv_tl, uv_tr, uv_br, normal)
@@ -347,6 +360,21 @@ func rotate_uv(uv_rect: Rect2, rotation_degrees: int) -> Dictionary:
 
 	return { "tl": tl, "tr": tr, "br": br, "bl": bl }
 
+func is_air_local(x, y, z) -> bool:
+	if x < 0 or x >= CHUNK_SIZE.x: return true
+	if y < 0 or y >= CHUNK_SIZE.y: return true
+	if z < 0 or z >= CHUNK_SIZE.z: return true
+	return blocks[x][z][y] == 0
+
+func is_water(x, y, z):
+	if x < 0 or x >= CHUNK_SIZE.x: return false
+	if y < 0 or y >= CHUNK_SIZE.y: return false
+	if z < 0 or z >= CHUNK_SIZE.z: return false
+	return blocks[x][z][y] == 6
+
+func is_air_global(wx, wy, wz) -> bool:
+	return world.get_block(wx, wy, wz) == 0
+
 func is_transparent_local(x, y, z) -> bool:
 	if x < 0 or x >= CHUNK_SIZE.x: return true
 	if y < 0 or y >= CHUNK_SIZE.y: return true
@@ -355,12 +383,23 @@ func is_transparent_local(x, y, z) -> bool:
 	var t = blocks[x][z][y]
 	return t == 0 or t == 6  # air or water
 
-func is_water(x, y, z):
-	if x < 0 or x >= CHUNK_SIZE.x: return false
-	if y < 0 or y >= CHUNK_SIZE.y: return false
-	if z < 0 or z >= CHUNK_SIZE.z: return false
-	return blocks[x][z][y] == 6
-
 func is_transparent_global(wx, wy, wz) -> bool:
 	var t = world.get_block(wx, wy, wz)
 	return t == 0 or t == 6  # air or water
+
+func add_flipped_up_face(st: SurfaceTool, pos: Vector3, uv_tl, uv_tr, uv_br, uv_bl):
+	var x = pos.x
+	var y = pos.y
+	var z = pos.z
+	var s = 1.0
+
+	var v010 = Vector3(x,     y+s, z)
+	var v110 = Vector3(x+s,   y+s, z)
+	var v111 = Vector3(x+s,   y+s, z+s)
+	var v011 = Vector3(x,     y+s, z+s)
+
+	# Triangle 1 (flipped)
+	_tri(st, v010, v111, v110, uv_tl, uv_br, uv_tr, Vector3.UP)
+
+	# Triangle 2 (flipped)
+	_tri(st, v111, v010, v011, uv_br, uv_tl, uv_bl, Vector3.UP)

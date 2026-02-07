@@ -13,6 +13,8 @@ var selected_block := 1  # default to grass
 const BLOCK_TYPES = [1, 3, 4, 5, 6]  # grass, dirt, stone (2 would be sides of grass)
 var paused = 0
 var gravity = 9.8
+var world: Node3D = null
+const WATERLAY_LEVEL = 129.5
 
 @export var grasstex: Texture2D
 @export var dirttex: Texture2D
@@ -43,9 +45,13 @@ var gravity = 9.8
 @onready var slot8 = $GUI/hotcontainer/slot8
 @onready var slot9 = $GUI/hotcontainer/slot9
 @onready var slot10 = $GUI/hotcontainer/slot10
-@onready var coordlabel = $GUI/coords
+@onready var coordlabel = $GUI/debugmenu/coords
+@onready var ocpblock = $GUI/debugmenu/ocpblock
+@onready var debugmenu = $GUI/debugmenu
+@onready var waterlay = $waterlay
 
 func _ready():
+	world = get_parent()
 	hotbar.frame = 0
 	if debuginv == true:
 		slot1.texture = grasstex
@@ -100,7 +106,8 @@ func _unhandled_input(event):
 func _physics_process(delta):
 	check_slots()
 	update_outline()
-	
+	check_block()
+
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
@@ -387,3 +394,28 @@ func check_slot10():
 
 func update_coordlabel():
 	coordlabel.text = "XYZ: " + str(round(self.position.x)) + ", " + str(round(self.position.y - 65)) + ", " + str(round(self.position.z))
+
+func get_block_player_is_in() -> int:
+	var pos = global_position
+
+	var bx = int(floor(pos.x))
+	var by = int(floor(pos.y))
+	var bz = int(floor(pos.z))
+
+	return world.get_block(bx, by, bz)
+
+func check_block():
+	var block = get_block_player_is_in()
+
+	if block == 0:
+		ocpblock.text = "Inside block type: Air"
+		waterlay.visible = false
+	elif block == 6:
+		ocpblock.text = "Inside block type: Water"
+		if self.position.y < WATERLAY_LEVEL:
+			waterlay.visible = true
+		else:
+			waterlay.visible = false
+	else:
+		ocpblock.text = "Inside block type: ?"
+		waterlay.visible = false
