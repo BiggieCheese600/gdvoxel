@@ -33,9 +33,9 @@ func _process(_delta):
 			if not loaded_chunks.has(key):
 				spawn_chunk(x, z)
 
-# ------------------------------
-# CHUNK UNLOADING
-# ------------------------------
+	# ------------------------------
+	# CHUNK UNLOADING
+	# ------------------------------
 
 	var chunks_to_unload: Array = []
 
@@ -69,20 +69,20 @@ func spawn_chunk(cx, cz):
 
 	loaded_chunks[Vector2i(cx, cz)] = chunk
 
-	# ✅ build mesh AFTER registration
+	# build mesh immediately (sync)
 	chunk.build_mesh()
-
 
 # ---------------------------------------------------------
 #  CHUNK LOOKUP
 # ---------------------------------------------------------
+
 func get_chunk(cx: int, cz: int):
 	return loaded_chunks.get(Vector2i(cx, cz), null)
-
 
 # ---------------------------------------------------------
 #  WORLD-LEVEL BLOCK PLACEMENT (GLOBAL COORDS)
 # ---------------------------------------------------------
+
 func set_block(global_x: int, global_y: int, global_z: int, block_type: int):
 	# Convert world coords → chunk coords
 	var cx = floori(float(global_x) / CHUNK_SIZE.x)
@@ -96,8 +96,6 @@ func set_block(global_x: int, global_y: int, global_z: int, block_type: int):
 	var local_x = global_x - cx * CHUNK_SIZE.x
 	var local_y = global_y
 	var local_z = global_z - cz * CHUNK_SIZE.z
-
-	print("global:", global_x, " cx:", cx, " local_x:", local_x)
 
 	# Safety: if somehow out of bounds, bail
 	if local_x < 0 or local_x >= CHUNK_SIZE.x:

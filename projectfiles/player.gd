@@ -27,7 +27,6 @@ const WATERLAY_LEVEL = 129.5
 @onready var camera = $Head/Camera3D
 @onready var outline = $"../OutlineCube"
 @onready var outlinecolarea: Area3D = $"../OutlineCube/Area3D"
-@onready var blocklabel = $GUI/BlockSelected
 @onready var pausemenu = $PauseMenu
 @onready var gui = $GUI
 @onready var pausecontainer = $PauseMenu/VBoxContainer
