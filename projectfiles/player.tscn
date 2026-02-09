@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://cs0higka5e4ir" path="res://hotbar8.png" id="9_pylmc"]
 [ext_resource type="Texture2D" uid="uid://dnuqijngyqwxs" path="res://hotbar9.png" id="10_pbfsw"]
 [ext_resource type="Texture2D" uid="uid://cytqo6kedljyo" path="res://hotbar10.png" id="11_5tmop"]
+[ext_resource type="FontFile" uid="uid://ct3l6u2vmdhfh" path="res://fs-tahoma-8px.otf" id="13_bwjto"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_urp6f"]
 atlas = ExtResource("2_urp6f")
@@ -112,7 +113,7 @@ shape = SubResource("CapsuleShape3D_606se")
 
 [node name="waterlay" type="Sprite2D" parent="." unique_id=141745221]
 visible = false
-modulate = Color(1, 1, 1, 0.34509805)
+modulate = Color(1, 1, 1, 0.63529414)
 texture_filter = 1
 position = Vector2(959.99994, 539.99994)
 scale = Vector2(119.99999, 67.49999)
@@ -124,6 +125,7 @@ texture = SubResource("AtlasTexture_q13i1")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+theme_override_fonts/font = ExtResource("13_bwjto")
 theme_override_font_sizes/font_size = 50
 text = "+"
 horizontal_alignment = 1
@@ -204,11 +206,13 @@ offset_bottom = 40.0
 
 [node name="coords" type="Label" parent="GUI/debugmenu" unique_id=1185608410]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("13_bwjto")
 theme_override_font_sizes/font_size = 40
 text = "XYZ: "
 
 [node name="ocpblock" type="Label" parent="GUI/debugmenu" unique_id=907479864]
 layout_mode = 2
+theme_override_fonts/font = ExtResource("13_bwjto")
 text = "Inside block type:"
 vertical_alignment = 1
 
