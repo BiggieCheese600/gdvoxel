@@ -13,7 +13,7 @@ var unloads_per_frame := 2
 
 # --- water ---
 var water_update_queue: Array = []
-var water_updates_per_frame := 64
+var water_updates_per_frame := 256      # increased for stability
 
 
 func _ready() -> void:
@@ -177,7 +177,6 @@ func get_block(global_x: int, global_y: int, global_z: int) -> int:
 	if local_y < 0 or local_y >= CHUNK_SIZE.y:
 		return 0
 
-	# async safety
 	if local_x >= chunk.blocks.size():
 		return 0
 	if local_z >= chunk.blocks[local_x].size():
@@ -186,8 +185,6 @@ func get_block(global_x: int, global_y: int, global_z: int) -> int:
 		return 0
 
 	var val = chunk.blocks[local_x][local_z][local_y]
-
-	# FINAL GUARANTEE
 	if typeof(val) != TYPE_INT:
 		return 0
 
@@ -202,7 +199,6 @@ func get_water_level(global_x: int, global_y: int, global_z: int) -> int:
 	if chunk == null:
 		return 8
 
-	# chunk not ready
 	if chunk.water_level.is_empty():
 		return 8
 
@@ -210,7 +206,6 @@ func get_water_level(global_x: int, global_y: int, global_z: int) -> int:
 	var local_y: int = global_y
 	var local_z: int = global_z - cz * CHUNK_SIZE.z
 
-	# bounds
 	if local_x < 0 or local_x >= CHUNK_SIZE.x:
 		return 8
 	if local_z < 0 or local_z >= CHUNK_SIZE.z:
@@ -218,7 +213,6 @@ func get_water_level(global_x: int, global_y: int, global_z: int) -> int:
 	if local_y < 0 or local_y >= CHUNK_SIZE.y:
 		return 8
 
-	# async safety
 	if local_x >= chunk.water_level.size():
 		return 8
 	if local_z >= chunk.water_level[local_x].size():
@@ -227,13 +221,15 @@ func get_water_level(global_x: int, global_y: int, global_z: int) -> int:
 		return 8
 
 	var lvl = chunk.water_level[local_x][local_z][local_y]
-
-	# final guarantee
 	if typeof(lvl) != TYPE_INT:
 		return 8
 
 	return lvl
 
+
+# ---------------------------------------------------------
+#  BLOCK SETTING + WATER TRIGGERS
+# ---------------------------------------------------------
 
 func set_block(global_x: int, global_y: int, global_z: int, block_type: int, level: int = 0) -> void:
 	var cx := floori(float(global_x) / CHUNK_SIZE.x)
@@ -264,6 +260,7 @@ func set_block(global_x: int, global_y: int, global_z: int, block_type: int, lev
 	else:
 		chunk.blocks[local_x][local_z][local_y] = block_type
 		chunk.water_level[local_x][local_z][local_y] = 8
+		schedule_neighbor_water_updates(global_x, global_y, global_z)
 
 	chunk.rebuild_mesh()
 
@@ -273,7 +270,35 @@ func set_block(global_x: int, global_y: int, global_z: int, block_type: int, lev
 # ---------------------------------------------------------
 
 func schedule_water_update(x: int, y: int, z: int) -> void:
-	water_update_queue.append(Vector3i(x, y, z))
+	var pos := Vector3i(x, y, z)
+
+	# dedupe
+	if pos in water_update_queue:
+		return
+
+	water_update_queue.append(pos)
+
+	# hard cap
+	if water_update_queue.size() > 5000:
+		water_update_queue.resize(5000)
+
+
+func schedule_neighbor_water_updates(x: int, y: int, z: int) -> void:
+	var dirs := [
+		Vector3i(1, 0, 0),
+		Vector3i(-1, 0, 0),
+		Vector3i(0, 1, 0),
+		Vector3i(0, -1, 0),
+		Vector3i(0, 0, 1),
+		Vector3i(0, 0, -1)
+	]
+
+	for d in dirs:
+		var nx: int = x + d.x
+		var ny: int = y + d.y
+		var nz: int = z + d.z
+		if get_block(nx, ny, nz) == 6:
+			schedule_water_update(nx, ny, nz)
 
 
 func process_water_updates() -> void:
@@ -286,6 +311,10 @@ func process_water_updates() -> void:
 
 
 func update_water_at(x: int, y: int, z: int) -> void:
+	# failsafe against storms
+	if water_update_queue.size() > 20000:
+		return
+
 	if y < 0 or y >= CHUNK_SIZE.y:
 		return
 
@@ -297,13 +326,13 @@ func update_water_at(x: int, y: int, z: int) -> void:
 	if level >= 8:
 		return
 
-	# 1. Try downward flow (always priority)
+	# 1. Downward flow
 	if get_block(x, y - 1, z) == 0:
 		set_block(x, y - 1, z, 6, 0)
 		schedule_water_update(x, y - 1, z)
 		return
 
-	# 2. Sideways flow with level decay
+	# 2. Sideways flow (throttled)
 	var dirs := [
 		Vector3i(1, 0, 0),
 		Vector3i(-1, 0, 0),
@@ -312,6 +341,10 @@ func update_water_at(x: int, y: int, z: int) -> void:
 	]
 
 	for d in dirs:
+		# throttle sideways spread
+		if randi() % 2 == 0:
+			continue
+
 		var nx: int = x + d.x
 		var ny: int = y
 		var nz: int = z + d.z
@@ -327,7 +360,7 @@ func update_water_at(x: int, y: int, z: int) -> void:
 			set_block(nx, ny, nz, 6, level + 1)
 			schedule_water_update(nx, ny, nz)
 
-	# 3. Dry up if isolated (no lower-level neighbors)
+	# 3. Dry up if isolated
 	var lowest := 8
 	for d in dirs:
 		var nx2: int = x + d.x

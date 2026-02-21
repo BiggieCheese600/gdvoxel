@@ -94,7 +94,6 @@ func _unhandled_input(event):
 				hotbar.frame = 9
 			else:
 				hotbar.frame -= 1
-			#selected_index = (selected_index + 1) % BLOCK_TYPES.size()
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			if hotbar.frame == 9:
 				hotbar.frame = 0

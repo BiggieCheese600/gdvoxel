@@ -1,7 +1,7 @@
 extends StaticBody3D
 
 const CHUNK_SIZE := Vector3i(16, 384, 16)
-const ATLAS_TILE_COUNT := 6
+
 const BLOCKS := {
 	0: { "name": "air",   "atlas_index": -1 },
 	1: { "name": "grass", "atlas_index": 0 },
@@ -11,6 +11,7 @@ const BLOCKS := {
 	5: { "name": "sand", "atlas_index": 4 },
 	6: { "name": "water", "atlas_index": 5 },
 }
+
 const WATER_LEVEL := 129.0
 
 var blocks: Array = []
@@ -22,6 +23,7 @@ var world
 @export var atlas: Texture2D
 @export var atlas_material: StandardMaterial3D
 @export var tile_size := Vector2(16, 16)
+
 @export var chunk_x: int = 0
 @export var chunk_z: int = 0
 
@@ -32,6 +34,7 @@ var blockgen_ready: bool = false
 var mesh_started: bool = false
 var mesh_ready: bool = false
 var _pending_mesh_data: Dictionary = {}
+
 var unloading: bool = false
 var unload_ready: bool = false
 
@@ -43,7 +46,22 @@ func _ready() -> void:
 
 
 # ---------------------------------------------------------
-#  BLOCK GENERATION (safe 3D allocation + water levels)
+#  WATER CORNER HEIGHT HELPER
+# ---------------------------------------------------------
+
+func _water_corner_height(world, wx: int, wy: int, wz: int, dx: int, dz: int) -> float:
+	var nx: int = wx + dx
+	var nz: int = wz + dz
+	var nl: int = world.get_water_level(nx, wy, nz)
+
+	if nl == 8:
+		return 0.0
+
+	return 1.0 - float(nl) / 8.0
+
+
+# ---------------------------------------------------------
+#  BLOCK GENERATION
 # ---------------------------------------------------------
 
 func generate_block_data() -> void:
@@ -75,7 +93,7 @@ func generate_block_data() -> void:
 				if y > height:
 					if y <= WATER_LEVEL:
 						blocks[x][z][y] = 6
-						water_level[x][z][y] = 0  # ocean/source water
+						water_level[x][z][y] = 0
 					else:
 						blocks[x][z][y] = 0
 						water_level[x][z][y] = 8
@@ -93,10 +111,7 @@ func generate_block_data() -> void:
 func start_blockgen_async() -> void:
 	blockgen_ready = false
 	mesh_started = false
-	WorkerThreadPool.add_task(
-		func(): _blockgen_job(),
-		true
-	)
+	WorkerThreadPool.add_task(func(): _blockgen_job(), true)
 
 
 func _blockgen_job() -> void:
@@ -114,10 +129,7 @@ func start_mesh_async() -> void:
 	mesh_started = true
 	mesh_ready = false
 	_pending_mesh_data.clear()
-	WorkerThreadPool.add_task(
-		func(): _mesh_build_job(),
-		true
-	)
+	WorkerThreadPool.add_task(func(): _mesh_build_job(), true)
 
 
 func _mesh_build_job() -> void:
@@ -179,7 +191,6 @@ func apply_mesh(mesh_data: Dictionary) -> void:
 	collision_shape.shape = mesh_data.collision.create_trimesh_shape()
 	add_child(collision_shape)
 
-
 # ---------------------------------------------------------
 #  ASYNC UNLOAD
 # ---------------------------------------------------------
@@ -189,26 +200,174 @@ func start_unload_async() -> void:
 		return
 	unloading = true
 	unload_ready = false
-	WorkerThreadPool.add_task(
-		func(): _unload_job(),
-		true
-	)
+	WorkerThreadPool.add_task(func(): _unload_job(), true)
 
 
 func _unload_job() -> void:
 	unload_ready = true
 
+# ---------------------------------------------------------
+#  WATER MESH (SLOPED TOP + SLOPED SIDES)
+# ---------------------------------------------------------
+
+func add_water_top_face(st: SurfaceTool, pos: Vector3, x: int, y: int, z: int) -> Dictionary:
+	var wx := chunk_x * CHUNK_SIZE.x + x
+	var wy := y
+	var wz := chunk_z * CHUNK_SIZE.z + z
+
+	var level: int = world.get_water_level(wx, wy, wz)
+
+	# Source block = flat top
+	if level == 0:
+		add_face(st, pos, Vector3.UP, 6)
+		return {
+			"tl": 1.0,
+			"tr": 1.0,
+			"bl": 1.0,
+			"br": 1.0
+		}
+
+	# Flowing block = sloped top
+	var h_tl := _water_corner_height(world, wx, wy, wz, 0, 0)
+	var h_tr := _water_corner_height(world, wx, wy, wz, 1, 0)
+	var h_bl := _water_corner_height(world, wx, wy, wz, 0, 1)
+	var h_br := _water_corner_height(world, wx, wy, wz, 1, 1)
+
+	var x0 := pos.x
+	var x1 := pos.x + 1
+	var z0 := pos.z
+	var z1 := pos.z + 1
+	var y0 := pos.y
+
+	var v_tl := Vector3(x0, y0 + h_tl, z0)
+	var v_tr := Vector3(x1, y0 + h_tr, z0)
+	var v_bl := Vector3(x0, y0 + h_bl, z1)
+	var v_br := Vector3(x1, y0 + h_br, z1)
+
+	var uv := get_uv_rect(BLOCKS[6]["atlas_index"])
+
+	_tri(st, v_tl, v_tr, v_br, uv.position, uv.position + Vector2(uv.size.x, 0), uv.position + uv.size, Vector3.UP)
+	_tri(st, v_br, v_bl, v_tl, uv.position + uv.size, uv.position + Vector2(0, uv.size.y), uv.position, Vector3.UP)
+
+	return {
+		"tl": h_tl,
+		"tr": h_tr,
+		"bl": h_bl,
+		"br": h_br
+	}
+
 
 # ---------------------------------------------------------
-#  FACE / BLOCK HELPERS
+#  SLOPED WATER SIDE FACES
 # ---------------------------------------------------------
 
-func is_air(x: int, y: int, z: int) -> bool:
+func add_water_side_face(
+	st: SurfaceTool,
+	pos: Vector3,
+	normal: Vector3,
+	h1: float,
+	h2: float
+) -> void:
+	var x := pos.x
+	var y := pos.y
+	var z := pos.z
+
+	var uv := get_uv_rect(BLOCKS[6]["atlas_index"])
+	var uv_tl = uv.position
+	var uv_tr = uv.position + Vector2(uv.size.x, 0)
+	var uv_br = uv.position + uv.size
+	var uv_bl = uv.position + Vector2(0, uv.size.y)
+
+	var b1 := Vector3()
+	var b2 := Vector3()
+	var t1 := Vector3()
+	var t2 := Vector3()
+
+	match normal:
+
+		# -------------------------------------------------
+		# X+ (RIGHT) — CCW pattern A
+		# -------------------------------------------------
+		Vector3.RIGHT:
+			b1 = Vector3(x+1, y,   z)
+			b2 = Vector3(x+1, y,   z+1)
+			t1 = Vector3(x+1, y+h1, z)
+			t2 = Vector3(x+1, y+h2, z+1)
+
+			_tri(st, b1, b2, t2, uv_bl, uv_tl, uv_tr, normal)
+			_tri(st, t2, t1, b1, uv_tr, uv_br, uv_bl, normal)
+			return
+
+		# -------------------------------------------------
+		# X- (LEFT) — CCW pattern A
+		# -------------------------------------------------
+		Vector3.LEFT:
+			b1 = Vector3(x, y,   z+1)
+			b2 = Vector3(x, y,   z)
+			t1 = Vector3(x, y+h2, z+1)
+			t2 = Vector3(x, y+h1, z)
+
+			_tri(st, b1, b2, t2, uv_bl, uv_tl, uv_tr, normal)
+			_tri(st, t2, t1, b1, uv_tr, uv_br, uv_bl, normal)
+			return
+
+		# -------------------------------------------------
+		# Z+ (FORWARD) — CCW pattern B (different!)
+		# -------------------------------------------------
+		Vector3.FORWARD:
+			b1 = Vector3(x,   y, z+1)
+			b2 = Vector3(x+1, y, z+1)
+			t1 = Vector3(x,   y+h1, z+1)
+			t2 = Vector3(x+1, y+h2, z+1)
+
+			_tri(st, b2, b1, t1, uv_bl, uv_tl, uv_tr, normal)
+			_tri(st, t1, t2, b2, uv_tr, uv_br, uv_bl, normal)
+			return
+
+		# -------------------------------------------------
+		# Z- (BACK) — CCW pattern B (different!)
+		# -------------------------------------------------
+		Vector3.BACK:
+			b1 = Vector3(x+1, y, z)
+			b2 = Vector3(x,   y, z)
+			t1 = Vector3(x+1, y+h2, z)
+			t2 = Vector3(x,   y+h1, z)
+
+			_tri(st, b2, b1, t1, uv_bl, uv_tl, uv_tr, normal)
+			_tri(st, t1, t2, b2, uv_tr, uv_br, uv_bl, normal)
+			return
+
+# ---------------------------------------------------------
+#  TRANSPARENCY + AIR HELPERS
+# ---------------------------------------------------------
+
+func is_air_local(x: int, y: int, z: int) -> bool:
 	if x < 0 or x >= CHUNK_SIZE.x: return true
 	if y < 0 or y >= CHUNK_SIZE.y: return true
 	if z < 0 or z >= CHUNK_SIZE.z: return true
 	return blocks[x][z][y] == 0
 
+
+func is_air_global(wx: int, wy: int, wz: int) -> bool:
+	return world.get_block(wx, wy, wz) == 0
+
+
+func is_transparent_local(x: int, y: int, z: int) -> bool:
+	if x < 0 or x >= CHUNK_SIZE.x: return true
+	if y < 0 or y >= CHUNK_SIZE.y: return true
+	if z < 0 or z >= CHUNK_SIZE.z: return true
+
+	var t: int = blocks[x][z][y]
+	return t == 0 or t == 6   # air or water
+
+
+func is_transparent_global(wx: int, wy: int, wz: int) -> bool:
+	var t: int = world.get_block(wx, wy, wz)
+	return t == 0 or t == 6   # air or water
+
+# ---------------------------------------------------------
+#  BLOCK FACE LOGIC (WATER + SOLIDS)
+# ---------------------------------------------------------
 
 func add_block_faces(st: SurfaceTool, x: int, y: int, z: int) -> void:
 	var pos := Vector3(x, y, z)
@@ -218,18 +377,33 @@ func add_block_faces(st: SurfaceTool, x: int, y: int, z: int) -> void:
 	var wy := y
 	var wz := chunk_z * CHUNK_SIZE.z + z
 
+	# -------------------------
+	# WATER BLOCK
+	# -------------------------
 	if block_type == 6:
-		var top_is_air := false
+		var h := add_water_top_face(st, pos, x, y, z)
 
-		if y + 1 < CHUNK_SIZE.y:
-			top_is_air = is_air_local(x, y + 1, z)
-		else:
-			top_is_air = is_air_global(wx, wy + 1, wz)
+		# RIGHT (+X)
+		if is_transparent_local(x + 1, y, z):
+			add_water_side_face(st, pos, Vector3.RIGHT, h["tr"], h["br"])
 
-		if top_is_air:
-			add_face(st, pos, Vector3.UP, 6)
+		# LEFT (-X)
+		if is_transparent_local(x - 1, y, z):
+			add_water_side_face(st, pos, Vector3.LEFT, h["tl"], h["bl"])
+
+		# FORWARD (+Z)  (toward player)
+		if is_transparent_local(x, y, z + 1):
+			add_water_side_face(st, pos, Vector3.FORWARD, h["bl"], h["br"])
+
+		# BACK (-Z)
+		if is_transparent_local(x, y, z - 1):
+			add_water_side_face(st, pos, Vector3.BACK, h["tl"], h["tr"])
 
 		return
+
+	# -------------------------
+	# SOLID BLOCKS
+	# -------------------------
 
 	var top_type := block_type
 	var bottom_type := block_type
@@ -281,29 +455,92 @@ func add_block_faces(st: SurfaceTool, x: int, y: int, z: int) -> void:
 		if is_transparent_global(wx, wy, wz - 1):
 			add_face(st, pos, Vector3.BACK, side_type)
 
+# ---------------------------------------------------------
+#  UV + TRI HELPERS
+# ---------------------------------------------------------
 
-func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int, flip := false) -> void:
-	if block_type == 0:
-		return
+func get_uv_rect(atlas_index: int) -> Rect2:
+	if atlas_index < 0:
+		return Rect2()
 
+	var atlas_size := atlas.get_size()
+	var tiles_x := int(atlas_size.x / tile_size.x)
+	var tiles_y := int(atlas_size.y / tile_size.y)
+
+	var tile_x := atlas_index % tiles_x
+	var tile_y := atlas_index / tiles_x
+
+	tile_y = tiles_y - 1 - tile_y
+
+	var uv_x := float(tile_x * tile_size.x) / atlas_size.x
+	var uv_y := float(tile_y * tile_size.y) / atlas_size.y
+	var uv_w := float(tile_size.x) / atlas_size.x
+	var uv_h := float(tile_size.y) / atlas_size.y
+
+	return Rect2(uv_x, uv_y, uv_w, uv_h)
+
+
+func rotate_uv(uv_rect: Rect2, rotation_degrees: int) -> Dictionary:
+	var tl := uv_rect.position
+	var tr := uv_rect.position + Vector2(uv_rect.size.x, 0)
+	var br := uv_rect.position + uv_rect.size
+	var bl := uv_rect.position + Vector2(0, uv_rect.size.y)
+
+	match rotation_degrees:
+		0:
+			return { "tl": tl, "tr": tr, "br": br, "bl": bl }
+
+		90, -270:
+			return { "tl": bl, "tr": tl, "br": tr, "bl": br }
+
+		180, -180:
+			return { "tl": br, "tr": bl, "br": tl, "bl": tr }
+
+		270, -90:
+			return { "tl": tr, "tr": br, "br": bl, "bl": tl }
+
+	return { "tl": tl, "tr": tr, "br": br, "bl": bl }
+
+
+func _tri(
+	st: SurfaceTool,
+	a: Vector3,
+	b: Vector3,
+	c: Vector3,
+	uva: Vector2,
+	uvb: Vector2,
+	uvc: Vector2,
+	normal: Vector3
+) -> void:
+	st.set_normal(normal)
+	st.set_uv(uva)
+	st.add_vertex(a)
+
+	st.set_normal(normal)
+	st.set_uv(uvb)
+	st.add_vertex(b)
+
+	st.set_normal(normal)
+	st.set_uv(uvc)
+	st.add_vertex(c)
+
+# ---------------------------------------------------------
+#  SOLID BLOCK FACE BUILDER
+# ---------------------------------------------------------
+
+func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int) -> void:
 	var atlas_index: int = BLOCKS[block_type]["atlas_index"]
 	var uv_rect := get_uv_rect(atlas_index)
 
 	var rotation := 0
 
 	match normal:
-		Vector3.FORWARD:
-			rotation = 90
-		Vector3.RIGHT:
-			rotation = 180
-		Vector3.BACK:
-			rotation = 180
-		Vector3.LEFT:
-			rotation = 90
-		Vector3.UP:
-			rotation = 0
-		Vector3.DOWN:
-			rotation = 0
+		Vector3.FORWARD: rotation = 90
+		Vector3.RIGHT: rotation = 180
+		Vector3.BACK: rotation = 180
+		Vector3.LEFT: rotation = 90
+		Vector3.UP: rotation = 0
+		Vector3.DOWN: rotation = 0
 
 	var uv := rotate_uv(uv_rect, rotation)
 
@@ -331,10 +568,6 @@ func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int, f
 			_tri(st, v010, v110, v111, uv_tl, uv_tr, uv_br, normal)
 			_tri(st, v111, v011, v010, uv_br, uv_bl, uv_tl, normal)
 
-			if block_type == 6:
-				_tri(st, v010, v111, v110, uv_tl, uv_br, uv_tr, normal)
-				_tri(st, v111, v010, v011, uv_br, uv_tl, uv_bl, normal)
-
 		Vector3.DOWN:
 			_tri(st, v000, v001, v101, uv_tl, uv_tr, uv_br, normal)
 			_tri(st, v101, v100, v000, uv_br, uv_bl, uv_tl, normal)
@@ -356,6 +589,10 @@ func add_face(st: SurfaceTool, pos: Vector3, normal: Vector3, block_type: int, f
 			_tri(st, v110, v010, v000, uv_br, uv_bl, uv_tl, normal)
 
 
+# ---------------------------------------------------------
+#  BLOCK BREAKING + PLACING
+# ---------------------------------------------------------
+
 func destroy_block_at(world_pos: Vector3, normal: Vector3) -> void:
 	var local := world_pos - global_position - normal * 0.1
 
@@ -370,6 +607,11 @@ func destroy_block_at(world_pos: Vector3, normal: Vector3) -> void:
 	blocks[x][z][y] = 0
 	water_level[x][z][y] = 8
 	rebuild_mesh()
+
+	var gx := chunk_x * CHUNK_SIZE.x + x
+	var gy := y
+	var gz := chunk_z * CHUNK_SIZE.z + z
+	world.schedule_neighbor_water_updates(gx, gy, gz)
 
 
 func rebuild_mesh() -> void:
@@ -396,84 +638,3 @@ func place_block_at(x: int, y: int, z: int, block_type: int) -> void:
 		water_level[x][z][y] = 8
 
 	rebuild_mesh()
-
-
-func get_uv_rect(atlas_index: int) -> Rect2:
-	if atlas_index < 0:
-		return Rect2()
-
-	var atlas_size := atlas.get_size()
-	var tiles_x := int(atlas_size.x / tile_size.x)
-	var tiles_y := int(atlas_size.y / tile_size.y)
-
-	var tile_x := atlas_index % tiles_x
-	var tile_y := atlas_index / tiles_x
-
-	tile_y = tiles_y - 1 - tile_y
-
-	var uv_x := float(tile_x * tile_size.x) / atlas_size.x
-	var uv_y := float(tile_y * tile_size.y) / atlas_size.y
-	var uv_w := float(tile_size.x) / atlas_size.x
-	var uv_h := float(tile_size.y) / atlas_size.y
-
-	return Rect2(uv_x, uv_y, uv_w, uv_h)
-
-
-func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3,
-uva: Vector2, uvb: Vector2, uvc: Vector2,
-normal: Vector3) -> void:
-	st.set_normal(normal)
-	st.set_uv(uva)
-	st.add_vertex(a)
-
-	st.set_normal(normal)
-	st.set_uv(uvb)
-	st.add_vertex(b)
-
-	st.set_normal(normal)
-	st.set_uv(uvc)
-	st.add_vertex(c)
-
-
-func rotate_uv(uv_rect: Rect2, rotation_degrees: int) -> Dictionary:
-	var tl := uv_rect.position
-	var tr := uv_rect.position + Vector2(uv_rect.size.x, 0)
-	var br := uv_rect.position + uv_rect.size
-	var bl := uv_rect.position + Vector2(0, uv_rect.size.y)
-
-	match rotation_degrees:
-		0:
-			return { "tl": tl, "tr": tr, "br": br, "bl": bl }
-		90, -270:
-			return { "tl": bl, "tr": tl, "br": tr, "bl": br }
-		180, -180:
-			return { "tl": br, "tr": bl, "br": tl, "bl": tr }
-		270, -90:
-			return { "tl": tr, "tr": br, "br": bl, "bl": tl }
-
-	return { "tl": tl, "tr": tr, "br": br, "bl": bl }
-
-
-func is_air_local(x: int, y: int, z: int) -> bool:
-	if x < 0 or x >= CHUNK_SIZE.x: return true
-	if y < 0 or y >= CHUNK_SIZE.y: return true
-	if z < 0 or z >= CHUNK_SIZE.z: return true
-	return blocks[x][z][y] == 0
-
-
-func is_air_global(wx: int, wy: int, wz: int) -> bool:
-	return world.get_block(wx, wy, wz) == 0
-
-
-func is_transparent_local(x: int, y: int, z: int) -> bool:
-	if x < 0 or x >= CHUNK_SIZE.x: return true
-	if y < 0 or y >= CHUNK_SIZE.y: return true
-	if z < 0 or z >= CHUNK_SIZE.z: return true
-
-	var t: int = blocks[x][z][y]
-	return t == 0 or t == 6
-
-
-func is_transparent_global(wx: int, wy: int, wz: int) -> bool:
-	var t: int = world.get_block(wx, wy, wz)
-	return t == 0 or t == 6
