@@ -283,7 +283,7 @@ max_value = 12.0
 value = 4.0
 
 [node name="sun" type="MeshInstance3D" parent="." unique_id=1178970690]
-transform = Transform3D(0.12251442, 0.69231987, -0.71111417, -0.71187955, -0.4379513, -0.54902273, -0.69153273, 0.5734909, 0.43919304, -36.483, 28.612, -41.308)
+transform = Transform3D(0.12251442, 0.69231987, -0.71111417, -0.71187955, -0.4379513, -0.54902273, -0.69153273, 0.5734909, 0.43919304, -50, 50, -50)
 material_override = SubResource("StandardMaterial3D_onrkg")
 mesh = SubResource("PlaneMesh_i3pqv")
 

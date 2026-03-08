@@ -216,10 +216,40 @@ func add_water_top_face(st: SurfaceTool, pos: Vector3, x: int, y: int, z: int) -
 	var wz := chunk_z * CHUNK_SIZE.z + z
 
 	var level: int = world.get_water_level(wx, wy, wz)
+	var epsilon := 0.01
 
 	# Source block = flat top
 	if level == 0:
+		# top at y+1
 		add_face(st, pos, Vector3.UP, 6)
+
+		# underside: same plane, slightly below
+		var uv := get_uv_rect(BLOCKS[6]["atlas_index"])
+
+		var x0 := pos.x
+		var x1 := pos.x + 1
+		var z0 := pos.z
+		var z1 := pos.z + 1
+		var y_top := pos.y + 1.0
+		var y_under := y_top - epsilon
+
+		var v_tl := Vector3(x0, y_under, z0)
+		var v_tr := Vector3(x1, y_under, z0)
+		var v_bl := Vector3(x0, y_under, z1)
+		var v_br := Vector3(x1, y_under, z1)
+
+		_tri(st, v_br, v_tr, v_tl,
+			uv.position + uv.size,
+			uv.position + Vector2(uv.size.x, 0),
+			uv.position,
+			Vector3.DOWN)
+
+		_tri(st, v_tl, v_bl, v_br,
+			uv.position,
+			uv.position + Vector2(0, uv.size.y),
+			uv.position + uv.size,
+			Vector3.DOWN)
+
 		return {
 			"tl": 1.0,
 			"tr": 1.0,
@@ -246,8 +276,36 @@ func add_water_top_face(st: SurfaceTool, pos: Vector3, x: int, y: int, z: int) -
 
 	var uv := get_uv_rect(BLOCKS[6]["atlas_index"])
 
-	_tri(st, v_tl, v_tr, v_br, uv.position, uv.position + Vector2(uv.size.x, 0), uv.position + uv.size, Vector3.UP)
-	_tri(st, v_br, v_bl, v_tl, uv.position + uv.size, uv.position + Vector2(0, uv.size.y), uv.position, Vector3.UP)
+	# TOP (above)
+	_tri(st, v_tl, v_tr, v_br,
+		uv.position,
+		uv.position + Vector2(uv.size.x, 0),
+		uv.position + uv.size,
+		Vector3.UP)
+
+	_tri(st, v_br, v_bl, v_tl,
+		uv.position + uv.size,
+		uv.position + Vector2(0, uv.size.y),
+		uv.position,
+		Vector3.UP)
+
+	# UNDERSIDE (slightly below the top surface)
+	var v_tl_u := v_tl - Vector3(0, epsilon, 0)
+	var v_tr_u := v_tr - Vector3(0, epsilon, 0)
+	var v_bl_u := v_bl - Vector3(0, epsilon, 0)
+	var v_br_u := v_br - Vector3(0, epsilon, 0)
+
+	_tri(st, v_br_u, v_tr_u, v_tl_u,
+		uv.position + uv.size,
+		uv.position + Vector2(uv.size.x, 0),
+		uv.position,
+		Vector3.DOWN)
+
+	_tri(st, v_tl_u, v_bl_u, v_br_u,
+		uv.position,
+		uv.position + Vector2(0, uv.size.y),
+		uv.position + uv.size,
+		Vector3.DOWN)
 
 	return {
 		"tl": h_tl,
@@ -338,8 +396,30 @@ func add_water_side_face(
 			return
 
 # ---------------------------------------------------------
-#  TRANSPARENCY + AIR HELPERS
+#  TRANSPARENCY + AIR & WATER HELPERS
 # ---------------------------------------------------------
+
+func is_water_neighbor(x: int, y: int, z: int, wx: int, wy: int, wz: int, dx: int, dy: int, dz: int) -> bool:
+	var lx := x + dx
+	var ly := y + dy
+	var lz := z + dz
+
+	world.get_water_level(lx, ly, lz)
+	if water_level[0]:
+		if lx >= 0 and lx < CHUNK_SIZE.x and ly >= 0 and ly < CHUNK_SIZE.y and lz >= 0 and lz < CHUNK_SIZE.z:
+			return blocks[lx][lz][ly] == 6
+	else:
+		return blocks[lx][lz][ly] == 0
+
+
+	# Outside → global
+	return is_water_global(wx + dx, wy + dy, wz + dz)
+
+func is_water_global(wx: int, wy: int, wz: int) -> bool:
+	if water_level[0]:
+		return world.get_block(wx, wy, wz) == 6
+	else:
+		return world.get_block(wx, wy, wz) == 0
 
 func is_air_local(x: int, y: int, z: int) -> bool:
 	if x < 0 or x >= CHUNK_SIZE.x: return true
@@ -381,26 +461,50 @@ func add_block_faces(st: SurfaceTool, x: int, y: int, z: int) -> void:
 	# WATER BLOCK
 	# -------------------------
 	if block_type == 6:
-		var h := add_water_top_face(st, pos, x, y, z)
+		var h: Dictionary
+
+		# -------------------------
+		# TOP FACE
+		# -------------------------
+
+		if not is_water_neighbor(x, y, z, wx, wy, wz, 0, +1, 0):
+			h = add_water_top_face(st, pos, x, y, z)
+		else:
+			h = { "tl": 1.0, "tr": 1.0, "bl": 1.0, "br": 1.0 }
+
+		# -------------------------
+		# SIDE FACES
+		# -------------------------
 
 		# RIGHT (+X)
-		if is_transparent_local(x + 1, y, z):
+		if not is_water_neighbor(x, y, z, wx, wy, wz, +1, 0, 0):
 			add_water_side_face(st, pos, Vector3.RIGHT, h["tr"], h["br"])
 
 		# LEFT (-X)
-		if is_transparent_local(x - 1, y, z):
+		if not is_water_neighbor(x, y, z, wx, wy, wz, -1, 0, 0):
 			add_water_side_face(st, pos, Vector3.LEFT, h["tl"], h["bl"])
 
-		# FORWARD (+Z)  (toward player)
-		if is_transparent_local(x, y, z + 1):
+		# FORWARD (+Z)
+		if not is_water_neighbor(x, y, z, wx, wy, wz, 0, 0, +1):
 			add_water_side_face(st, pos, Vector3.FORWARD, h["bl"], h["br"])
 
 		# BACK (-Z)
-		if is_transparent_local(x, y, z - 1):
+		if not is_water_neighbor(x, y, z, wx, wy, wz, 0, 0, -1):
 			add_water_side_face(st, pos, Vector3.BACK, h["tl"], h["tr"])
 
-		return
+		# -------------------------
+		# BOTTOM FACE (INVERTED TOP)
+		# -------------------------
 
+		if y - 1 >= 0:
+			if is_air_local(x, y - 1, z):
+				add_face(st, pos, Vector3.DOWN, 6)
+		else:
+			# Below chunk → global check
+			if is_air_global(wx, wy - 1, wz):
+				add_face(st, pos, Vector3.DOWN, 6)
+
+		return
 	# -------------------------
 	# SOLID BLOCKS
 	# -------------------------

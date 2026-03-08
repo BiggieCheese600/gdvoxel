@@ -1,10 +1,11 @@
 extends CharacterBody3D
 
 var mouse = InputEventMouseMotion
-const WALK_SPEED = 5.0
-const SPRINT_SPEED = 8.0
-const JUMP_VELOCITY = 4.5
+var WALK_SPEED = 5.0
+var SPRINT_SPEED = 8.0
+var JUMP_VELOCITY = 4.5
 var speed
+var jumplimit = true
 const SENSITIVITY = 0.003
 var debuginv = true
 var captured = 1
@@ -14,7 +15,6 @@ const BLOCK_TYPES = [1, 3, 4, 5, 6]  # grass, dirt, stone (2 would be sides of g
 var paused = 0
 var gravity = 9.8
 var world: Node3D = null
-const WATERLAY_LEVEL = 129.5
 
 @export var grasstex: Texture2D
 @export var dirttex: Texture2D
@@ -106,11 +106,18 @@ func _physics_process(delta):
 	update_outline()
 	check_block()
 
-	if not is_on_floor():
-		velocity.y -= gravity * delta
+	if jumplimit == true:
+		if not is_on_floor():
+			velocity.y -= gravity * delta
+	else:
+		velocity.y -= (gravity / 2) * delta
 
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity.y = JUMP_VELOCITY
+	if Input.is_action_pressed("jump"):
+		if jumplimit == true:
+			if is_on_floor():
+				velocity.y = JUMP_VELOCITY
+		else:
+			velocity.y = JUMP_VELOCITY
 
 	if Input.is_action_pressed("sprint"):
 		speed = SPRINT_SPEED
@@ -402,18 +409,40 @@ func get_block_player_is_in() -> int:
 
 	return world.get_block(bx, by, bz)
 
+func get_block_above() -> int:
+	var pos = global_position
+
+	var bx = int(floor(pos.x))
+	var by = int(floor(pos.y + .4))
+	var bz = int(floor(pos.z))
+
+	return world.get_block(bx, by, bz)
+
 func check_block():
 	var block = get_block_player_is_in()
+	var blockabove = get_block_above()
 
 	if block == 0:
+		WALK_SPEED = 5.0
+		SPRINT_SPEED = 8.0
+		JUMP_VELOCITY = 4.5
+		jumplimit = true
 		ocpblock.text = "Inside block type: Air"
 		waterlay.visible = false
 	elif block == 6:
+		WALK_SPEED = 5.0 / 1.5
+		SPRINT_SPEED = 8.0 / 2
+		jumplimit = false
 		ocpblock.text = "Inside block type: Water"
-		if self.position.y < WATERLAY_LEVEL:
+		if blockabove == 6:
 			waterlay.visible = true
+			JUMP_VELOCITY = 4.5 / 2
 		else:
 			waterlay.visible = false
 	else:
+		WALK_SPEED = 5.0
+		SPRINT_SPEED = 8.0
+		JUMP_VELOCITY = 4.5
+		jumplimit = true
 		ocpblock.text = "Inside block type: ?"
 		waterlay.visible = false
