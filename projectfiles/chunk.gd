@@ -106,6 +106,22 @@ func generate_block_data() -> void:
 				else:
 					blocks[x][z][y] = 4
 					water_level[x][z][y] = 8
+	# ---------------------------------------------------------
+	# SECOND PASS: Convert dirt/grass near water into sand
+	# ---------------------------------------------------------
+
+	var radius := 3
+
+	for x in range(CHUNK_SIZE.x):
+		for z in range(CHUNK_SIZE.z):
+			for y in range(CHUNK_SIZE.y):
+
+				var t: int = int(blocks[x][z][y])
+
+				# Only dirt (3) or grass (1)
+				if t == 1 or t == 3:
+					if _is_water_within_radius(x, y, z, radius):
+						blocks[x][z][y] = 5  # sand
 
 
 func start_blockgen_async() -> void:
@@ -396,7 +412,7 @@ func add_water_side_face(
 			return
 
 # ---------------------------------------------------------
-#  TRANSPARENCY + AIR & WATER HELPERS
+#  TRANSPARENCY + AIR, WATER, SAND, HELPERS
 # ---------------------------------------------------------
 
 func is_water_neighbor(x: int, y: int, z: int, wx: int, wy: int, wz: int, dx: int, dy: int, dz: int) -> bool:
@@ -444,6 +460,22 @@ func is_transparent_local(x: int, y: int, z: int) -> bool:
 func is_transparent_global(wx: int, wy: int, wz: int) -> bool:
 	var t: int = world.get_block(wx, wy, wz)
 	return t == 0 or t == 6   # air or water
+
+func _is_water_within_radius(x: int, y: int, z: int, radius: int) -> bool:
+	for dx in range(-radius, radius + 1):
+		for dy in range(-radius, radius + 1):
+			for dz in range(-radius, radius + 1):
+				var nx := x + dx
+				var ny := y + dy
+				var nz := z + dz
+
+				if nx < 0 or nx >= CHUNK_SIZE.x: continue
+				if ny < 0 or ny >= CHUNK_SIZE.y: continue
+				if nz < 0 or nz >= CHUNK_SIZE.z: continue
+
+				if blocks[nx][nz][ny] == 6: # water
+					return true
+	return false
 
 # ---------------------------------------------------------
 #  BLOCK FACE LOGIC (WATER + SOLIDS)
