@@ -3,6 +3,7 @@ extends CharacterBody3D
 var mouse = InputEventMouseMotion
 var WALK_SPEED = 5.0
 var SPRINT_SPEED = 8.0
+var SNEAK_SPEED = 2.5
 var JUMP_VELOCITY = 4.5
 var speed
 var jumplimit = true
@@ -15,6 +16,7 @@ const BLOCK_TYPES = [1, 3, 4, 5, 6]  # grass, dirt, stone (2 would be sides of g
 var paused = 0
 var gravity = 9.8
 var world: Node3D = null
+var is_flying = false
 
 @export var grasstex: Texture2D
 @export var dirttex: Texture2D
@@ -50,6 +52,7 @@ var world: Node3D = null
 @onready var waterlay = $waterlay
 
 func _ready():
+	speed = WALK_SPEED
 	world = get_parent()
 	hotbar.frame = 0
 	if debuginv == true:
@@ -100,6 +103,12 @@ func _unhandled_input(event):
 			else:
 				hotbar.frame += 1
 
+	if event.is_action_pressed("togglefly"):
+		if is_flying == false:
+			is_flying = true
+		else:
+			is_flying = false
+
 
 func _physics_process(delta):
 	check_slots()
@@ -108,22 +117,43 @@ func _physics_process(delta):
 
 	if jumplimit == true:
 		if not is_on_floor():
-			velocity.y -= gravity * delta
+			if is_flying == false:
+				velocity.y -= gravity * delta
 	else:
-		velocity.y -= (gravity / 2) * delta
+		if is_flying == false:
+			velocity.y -= (gravity / 2) * delta
 
 	if Input.is_action_pressed("jump"):
 		if jumplimit == true:
-			if is_on_floor():
+			if is_flying == false:
+				if is_on_floor():
+					velocity.y = JUMP_VELOCITY
+			else:
 				velocity.y = JUMP_VELOCITY
 		else:
 			velocity.y = JUMP_VELOCITY
 
+	if Input.is_action_just_released("jump"):
+		if is_flying == true:
+			velocity.y = 0
+
+	if Input.is_action_just_pressed("sneak"):
+		if is_flying == false:
+			speed = SNEAK_SPEED
+		else:
+			velocity.y = -JUMP_VELOCITY
+
+	if Input.is_action_just_released("sneak"):
+		if is_flying == true:
+			velocity.y = 0
+
 	if Input.is_action_pressed("sprint"):
-		speed = SPRINT_SPEED
-	else:
+		if speed == WALK_SPEED:
+			speed = SPRINT_SPEED
+
+	if Input.is_action_pressed("sprint") == false and Input.is_action_pressed("sneak") == false:
 		speed = WALK_SPEED
-	
+
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var direction = (head.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	if direction:
